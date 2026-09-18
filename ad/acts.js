@@ -95,6 +95,9 @@ var ACT={
       P.say(s.c,"まてまて〜",1.3);},
     update:function(s,dt){var c=s.c,r=s.r;
       if(s.endSoon){c.hold=r.hold=true;c.sleep=false;s.es=(s.es||0)+dt;
+        /* おわりのあいさつは、重なったままにならないよう すこし間をあけて向かいあう */
+        var ex=r.x-c.x,ey=r.y-c.y,ed=Math.hypot(ex,ey)||1,eg=(c.u+r.u)*.72;
+        if(ed<eg){var ep=(eg-ed)*.35;c.x-=ex/ed*ep;c.y-=ey/ed*ep*.5;r.x+=ex/ed*ep;r.y+=ey/ed*ep*.5;}
         if(s.es>.8&&once(s,"faceBye")){faceTo(c,r);faceTo(r,c);}
         return goodbye(s,c,r,s.es,1.8);}
       s.stun=Math.max(0,s.stun-dt);s.rstun=Math.max(0,s.rstun-dt);
@@ -105,8 +108,22 @@ var ACT={
       var dx=r.x-c.x,dy=r.y-c.y,d=Math.hypot(dx,dy)||1;
       /* 走っている間の向きは 動いた方向だけで決める（止まったときに前の向きへ戻さない） */
       r.face=0;
-      if(!c.hold){c.face=0;go(c,r.x,r.y,1.5);}
+      /* タッチできるようになるまで（にげる子の はなれる時間）は、おにを少しゆっくりにして 追いつかせない */
+      var grace=s.tt<s.minT;
+      if(!c.hold){c.face=0;go(c,r.x,r.y,grace?1.15:1.5);}
       else if(Math.abs(dx)>c.u*.5)c.face=dx>0?1:-1;
+      /* タッチできないとき（はなれる時間中・数えている間・つかまった直後）は、重ならないようにする。
+         おには すこし下がり、にげる子は 前に出る。タッチできるときは はなさない（そうしないと つかまえられない） */
+      var canCatch=!c.hold&&s.tt>s.minT&&!s.endSoon,minGap=(c.u+r.u)*.6;
+      if(!canCatch&&d<minGap){
+        var push=(minGap-d)*(grace?.6:.45);
+        c.x-=dx/d*push;c.y-=dy/d*push*.5;
+        r.x+=dx/d*push*.5;r.y+=dy/d*push*.25;
+        if(grace&&!counting){
+          c.hold=true;
+          if(P.now-(s.nearT==null?-9:s.nearT)>1.8){s.nearT=P.now;P.say(c,pick(["あとちょっと…","まてまて〜！"]),1.1);}
+        }
+      }
       /* にげる先は しばらく決めたままにする（毎フレーム決めなおすと、左右にぶるぶる向きが変わる）
          着いた・時間がたった・おにの方が先に近づいた ときだけ決めなおす */
       s.fleeT=(s.fleeT||0)-dt;
@@ -117,7 +134,7 @@ var ACT={
       if(s.flee)go(r,s.flee.x,s.flee.y,counting?1.8:1.45);
       s.talkT-=dt;
       if(s.talkT<0&&!counting){s.talkT=rand(1.8,2.8);if(Math.random()<.5)P.say(r,pick(["にげろ〜","こっちだよ〜","きゃ〜！"]),1.2);else P.say(c,pick(["まてまて〜","まて〜！","つかまえるぞ〜"]),1.2);}
-      if(!c.hold&&s.tt>s.minT&&Math.hypot(dx,dy*1.5)<(c.u+r.u)*.5){
+      if(canCatch&&Math.hypot(dx,dy*1.5)<(c.u+r.u)*.5){
         P.say(c,"タッチ！",1.1);P.jump(c,3.5);
         var caught=r,tagger=c;
         P.later(.5,function(){if(alive(s,caught))P.say(caught,"つかまった〜",1.2);});
