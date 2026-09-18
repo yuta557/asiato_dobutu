@@ -226,7 +226,7 @@ var ACT={
           if(!alive(s,rc))return;
           if(s.miss){s.miss=false;roll(s,rc,true);return;}
           s.recv=null;P.jump(rc,2.2);
-          if(thanks)P.say(rc,"ありがとう！",1);else if(Math.random()<.4)P.say(rc,pick(["とった！","ナイス！","うまいね"]),1);
+          if(thanks)P.say(rc,"ありがとう！",1);else if(Math.random()<.4)P.say(rc,pick(["とった！","ナイス！","じょうず〜！"]),1);
           s.h=rc;s.kicks++;s.wait=.5;};
       }
     },
@@ -410,8 +410,10 @@ ACT.mizu={
       var best=spots.filter(function(q){return used.indexOf(q)<0;}).sort(function(q1,q2){return Math.hypot(a.x-q1.x,a.y-q1.y)-Math.hypot(a.x-q2.x,a.y-q2.y);})[0]||spots[0];
       used.push(best);a.spot=best;go(a,best.x,best.y,1.2);
     });
+    /* 「ぱおーん」は ゾウだけ。ゾウがいないときは ほかの子が さそう */
     var ele=s.m.filter(function(a){return a.sp.key==="foot2";})[0];
     if(ele)P.say(ele,"ぱおーん、いけに いこう！",1.3);
+    else P.say(s.m[0],pick(["いけに いこう！","みずあび しよう！"]),1.3);
     s.turn=0;s.k=0;s.goal=6+(s.m.length-2)*2;s.n=0;
   },
   update:function(s,dt){
