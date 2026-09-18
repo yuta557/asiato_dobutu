@@ -11,15 +11,22 @@ P.setCapacity=function(){
   var area=S.W*(S.bottom-S.top),per=22*P.U*P.U;
   P.MAX=AD.clamp(Math.round(area/per),5,12);
 };
-/* 多すぎるときは、古い子から「またね〜」と帰っていく */
+/* 多すぎるときは、古い子から なにも言わずに 出ていく */
 P.trim=function(keep){
   var live=P.animals.filter(function(b){return !b.leaving&&b!==keep;});
   var extra=live.length+(keep?1:0)-P.MAX;
-  live.sort(function(p,q){return (p.sess?1:0)-(q.sess?1:0);});
-  for(var i=0;i<extra&&i<live.length;i++){
-    var old=live[i];
+  for(var i=0;i<extra&&live.length;i++){
+    /* 出ていくのは、同じ種類が何ひきもいる子から。同じなら、あそんでいない子・古い子から。
+       そうすると 草原に のこるどうぶつの種類が ばらけていく */
+    var count={};
+    P.animals.forEach(function(b){if(!b.leaving)count[b.sp.key]=(count[b.sp.key]||0)+1;});
+    live.sort(function(p,q){
+      return (count[q.sp.key]||0)-(count[p.sp.key]||0)||(p.sess?1:0)-(q.sess?1:0)||q.age-p.age;
+    });
+    var old=live.shift();
     if(old.sess)AD.acts.end(old.sess);
-    old.leaving=true;old.tx=old.x<S.W/2?-old.u*3:S.W+old.u*3;old.ty=old.y;old.mult=1.3;P.say(old,"またね〜",1.4);
+    old.leaving=true;old.tx=old.x<S.W/2?-old.u*3:S.W+old.u*3;old.ty=old.y;old.mult=1.3;
+    P.bubbles=P.bubbles.filter(function(b){return b.a!==old;});
   }
 };
 /* ほかのどうぶつから一番はなれた場所をえらぶ */
@@ -28,6 +35,7 @@ P.roomySpot=function(a){
   var best=null,bd=-1e9;
   for(var i=0;i<6;i++){
     var p=S.safeSpot(a.u)||S.randomSpot(a.u),m=1e9;
+    if(P.inArea(p.x,p.y,a.u,a.sess))continue;
     P.animals.forEach(function(b){if(b!==a)m=Math.min(m,Math.hypot(b.x-p.x,(b.y-p.y)*1.6));});
     m-=Math.hypot(p.x-a.x,p.y-a.y)*.25;
     if(m>bd){bd=m;best=p;}
@@ -55,7 +63,7 @@ P.spawn=function(sp,x,y,mode,grow){
     age:mode==="quiet"?3:0,deco:mode==="quiet"?1:0,mode:mode,grow:grow||1,seed:Math.random()*10,
     rest:rand(.6,2),tx:x,ty:y,mult:1,sess:null,sleep:false,blink:0,blinkT:rand(1.5,5),talk:0,nod:0,
     leaving:false,alpha:1,cool:mode==="quiet"?rand(1,3):2.2,u:0,shake:0,face:0,hold:false,said:mode==="quiet",sparked:mode==="quiet"};
-  a.u=P.unit(a);
+  a.u=P.unit(a);a.scatter=1.8;
   P.animals.push(a);
   P.trim(a);
   return a;
@@ -65,6 +73,39 @@ P.unit=function(a){return P.U*(a.sp.kind==="hand"?1:.92)*a.grow*S.depth(a.y);};
 P.props=[];
 P.clearAll=function(){P.animals=[];P.sessions=[];P.bubbles=[];P.notes=[];P.balls=[];P.sparks=[];P.queue=[];P.props=[];};
 
+/* ---- あそんでいる場所（ほかの子は近づかない・あいだを横切らない）----
+   あそびは同時に1つなので、そのあそびのメンバー（とボール）をかこむ四角を「あそび場」とする */
+P.area=null;
+P.updateArea=function(){
+  var s=P.sessions[0];
+  if(!s||s.m.length<2){P.area=null;return;}
+  var l=1e9,r=-1e9,t=1e9,b=-1e9,u=0;
+  s.m.forEach(function(a){
+    u=Math.max(u,a.u);
+    var x=a.tx!=null&&!a.hold?(a.tx+a.x)/2:a.x,y=a.ty!=null&&!a.hold?(a.ty+a.y)/2:a.y;
+    l=Math.min(l,a.x,x);r=Math.max(r,a.x,x);t=Math.min(t,a.y,y);b=Math.max(b,a.y,y);
+  });
+  if(s.ball){l=Math.min(l,s.ball.x);r=Math.max(r,s.ball.x);t=Math.min(t,s.ball.y);b=Math.max(b,s.ball.y);}
+  P.area={l:l-u*.7,r:r+u*.7,t:t-u*1.1,b:b+u*.35,sess:s};
+};
+/* その場所（どうぶつの大きさぶんの余裕こみ）が あそび場にかかるか */
+P.inArea=function(x,y,u,sess){
+  var A=P.area;if(!A||(sess&&sess===A.sess))return false;
+  var pad=u*1.2;
+  return x>A.l-pad&&x<A.r+pad&&y>A.t-pad&&y<A.b+pad*.7;
+};
+/* あそび場の中にいる子を、いちばん近い外がわへ */
+function stepOut(a){
+  var A=P.area,pad=a.u*1.6;
+  var outs=[{x:A.l-pad,y:a.y},{x:A.r+pad,y:a.y},{x:a.x,y:A.t-pad},{x:a.x,y:A.b+pad*.8}];
+  var best=null,bd=1e9;
+  outs.forEach(function(q){
+    q.x=clamp(q.x,a.u,S.W-a.u);q.y=clamp(q.y,S.top,S.bottom);
+    if(P.inArea(q.x,q.y,a.u,a.sess))return;
+    var d=Math.hypot(q.x-a.x,(q.y-a.y)*1.4);if(d<bd){bd=d;best=q;}
+  });
+  return best||P.roomySpot(a);
+}
 /* 前にほかの子がいたら、横によけながら進む（同じあそびの なかまどうしは よけない） */
 function avoid(a,ux,uy){
   var sx=0,sy=0;
@@ -77,6 +118,19 @@ function avoid(a,ux,uy){
     var side=(ux*ey-uy*ex)>0?-1:1,w=(1-dist/R)*ahead*1.8;
     sx+=-uy*side*w-ex/dist*w*.35;sy+=ux*side*w-ey/dist*w*.35;
   });
+  /* あそび場の手前では、中に入らないよう まわりこむ */
+  var A=P.area;
+  if(A&&!a.sess&&!a.helping){
+    var pad=a.u*1.3,ax=(A.l+A.r)/2,ay=(A.t+A.b)/2,hw=(A.r-A.l)/2+pad,hh=(A.b-A.t)/2+pad;
+    var ex2=ax-a.x,ey2=ay-a.y,near=Math.abs(ex2)<hw+a.u*1.6&&Math.abs(ey2)<hh+a.u*1.6;
+    if(near){
+      var dist2=Math.hypot(ex2,ey2)||1,ahead2=(ex2*ux+ey2*uy)/dist2;
+      if(ahead2>0){
+        var side2=(ux*ey2-uy*ex2)>0?-1:1,w2=ahead2*1.6;
+        sx+=-uy*side2*w2-ex2/dist2*w2*.8;sy+=ux*side2*w2-ey2/dist2*w2*.8;
+      }
+    }
+  }
   var nx=ux+sx,ny=uy+sy,n=Math.hypot(nx,ny)||1;
   return {x:nx/n,y:ny/n};
 }
@@ -84,6 +138,7 @@ function stepAnimal(a,dt){
   a.age+=dt;a.cool-=dt;a.talk=Math.max(0,a.talk-dt);
   /* ぶつかったままの子は、少しはなれた場所へ移る */
   a.bump=Math.max(0,(a.bump||0)-dt*.6);
+  a.scatter=Math.max(0,(a.scatter||0)-dt);
   if(a.bump>.7&&!a.sess&&!a.leaving&&a.bumpBy){
     var bx=a.x-a.bumpBy.x,by=a.y-a.bumpBy.y,bl=Math.hypot(bx,by)||1,away={x:a.x+bx/bl*a.u*2.2,y:a.y+by/bl*a.u*1.2};
     if(!S.clear(away.x,away.y,a.u))away=P.roomySpot(a);
@@ -97,7 +152,14 @@ function stepAnimal(a,dt){
   a.blinkT-=dt;if(a.blinkT<0){a.blink=.12;a.blinkT=rand(2,5);}a.blink=Math.max(0,a.blink-dt);
   if(a.land>0)a.land=Math.max(0,a.land-dt/.16);
   if(a.age<1.1)return;
-  if(!a.sess&&!a.leaving){
+  if(!a.sess&&!a.leaving&&!a.helping){
+    /* あそんでいる場所には入らない。中にいたら すぐ外へ出る。行き先が中なら えらびなおす */
+    if(P.area&&P.inArea(a.x,a.y,a.u,a.sess)){
+      if(!a.keepOut){a.keepOut=true;var e=stepOut(a);a.tx=e.x;a.ty=e.y;a.rest=0;a.mult=1.25;}
+    }else{
+      if(a.keepOut){a.keepOut=false;a.mult=1;a.rest=rand(.3,1.2);}
+      if(P.inArea(a.tx,a.ty,a.u,a.sess)){var q=P.roomySpot(a);a.tx=q.x;a.ty=q.y;}
+    }
     if(a.rest>0)a.rest-=dt;
     else if(Math.hypot(a.tx-a.x,a.ty-a.y)<a.u*.3){a.rest=rand(1.6,4);var p=P.roomySpot(a);a.tx=p.x;a.ty=p.y;}
   }
@@ -123,6 +185,7 @@ function stepAnimal(a,dt){
 
 P.update=function(dt){
   P.now+=dt;
+  P.updateArea();
   for(var q=P.queue.length-1;q>=0;q--)if(P.queue[q].t<=P.now){var job=P.queue.splice(q,1)[0];job.fn();}
   AD.acts.schedule(dt);
   P.sessions.slice().forEach(function(s){AD.acts.tick(s,dt);});
@@ -132,9 +195,17 @@ P.update=function(dt){
     var a=L[i],b=L[j];
     if(a.leaving||b.leaving||(a.sess&&a.sess===b.sess)||a.hidden||b.hidden)continue;
     var dx=a.x-b.x,dy=(a.y-b.y)*2,d=Math.hypot(dx,dy),min=(a.u+b.u)*.8;
+    /* ぴったり同じ場所（同時にうまれたときなど）は、むきを決められないので すこしずらす */
+    if(d<.01){var an=Math.random()*TAU;dx=Math.cos(an)*.5;dy=Math.sin(an)*.5;d=.5;}
     if(d<min&&d>.01){
-      var k=(min-d)/d*.5*Math.min(1,dt*5);a.x+=dx*k;b.x-=dx*k;a.y+=dy*k*.2;b.y-=dy*k*.2;
-      a.bump=(a.bump||0)+dt*1.6;a.bumpBy=b;b.bump=(b.bump||0)+dt*1.6;b.bumpBy=a;
+      /* うまれたばかりで重なっているときは、はやく はなれる */
+      var fast=(a.scatter>0||b.scatter>0)?3.2:1;
+      var k=(min-d)/d*.5*Math.min(1,dt*5*fast);a.x+=dx*k;b.x-=dx*k;a.y+=dy*k*.2;b.y-=dy*k*.2;
+      a.bump=(a.bump||0)+dt*1.6*fast;a.bumpBy=b;b.bump=(b.bump||0)+dt*1.6*fast;b.bumpBy=a;
+      if(fast>1)[a,b].forEach(function(z){
+        if(z.sess||z.leaving||z.helping||z.age<1.1||P.now-(z.scatterT||-9)<1.5)return;
+        z.scatterT=P.now;z.rest=0;var q=P.roomySpot(z);z.tx=q.x;z.ty=q.y;
+      });
     }
   }
   P.animals=L.filter(function(a){return !(a.leaving&&(a.x<-a.u*2.5||a.x>S.W+a.u*2.5));});

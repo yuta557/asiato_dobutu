@@ -222,8 +222,11 @@ ACT.race={
 ACT.tug={
   init:function(s){
     var u=maxU(s.m),n=s.m.length,half=n/2;
-    s.L=s.m.slice(0,half);s.R=s.m.slice(half);s.o=0;s.gap=u*1.25;
-    function base(team,i,c){return c.x+(team==="L"?-1:1)*(u*.9+i*s.gap);}
+    s.L=s.m.slice(0,half);s.R=s.m.slice(half);s.o=0;
+    /* つなの長さ（＝ならぶ間かく）は どうぶつの大きさから決める。せまいボードでは 少しつめる */
+    var room=S.W*.44/u,inner=1.35;
+    s.gap=half>1?clamp((room-inner)/(half-1),1.5,2):2;
+    function base(team,i,c){return c.x+(team==="L"?-1:1)*(inner*u+i*s.gap*u);}
     function pos(c){return s.L.map(function(a,i){return {x:base("L",i,c),y:c.y};}).concat(s.R.map(function(a,i){return {x:base("R",i,c),y:c.y};}));}
     s.c=formation(s,u,pos);s.base=base;
     s.L.forEach(function(a,i){a.pow=rand(.9,1.1);go(a,base("L",i,s.c),s.c.y,1.2);});

@@ -316,7 +316,27 @@ var ACT={
   parade:{init:function(s){
       /* 先頭は さそった子。まず先頭のうしろに 一列にならんでから「しゅっぱーつ！」 */
       var L=s.m[0],prev={x:L.x,y:L.y};
-      s.wp=[];for(var w=0;w<3;w++){var p=S.safeSpot(L.u*1.3,null,function(q){return AD.dist(prev,q)>L.u*3&&S.segClear(prev,q,L.u);})||S.safeSpot(L.u*1.3)||S.randomSpot(L.u*2);s.wp.push(p);prev=p;}
+      /* 草原を6つに分けて、先頭のいる場所から ぐるっと まわるように 4か所をえらぶ（同じところを行ったり来たりしない） */
+      var cx=S.W/2,cy=(S.top+S.bottom)/2,zones=[];
+      for(var col=0;col<3;col++)for(var row=0;row<2;row++){
+        var zx=S.W*(.16+col*.34),zy=S.top+(S.bottom-S.top)*(row?.75:.28);
+        if(Math.abs(zx-L.x)<L.u*2.5&&Math.abs(zy-L.y)<L.u*2)continue;
+        zones.push({x:zx,y:zy,an:Math.atan2(zy-cy,zx-cx)});
+      }
+      var start=Math.atan2(L.y-cy,L.x-cx),turn=Math.random()<.5?1:-1;
+      zones.forEach(function(z){var d=(z.an-start)*turn;while(d<0)d+=Math.PI*2;z.order=d;});
+      zones.sort(function(p,q){return p.order-q.order;});
+      s.wp=[];
+      zones.slice(0,4).forEach(function(z){
+        var got=null;
+        for(var t=0;t<14&&!got;t++){
+          var q={x:clamp(z.x+rand(-1,1)*S.W*.1,L.u*1.4,S.W-L.u*1.4),y:clamp(z.y+rand(-1,1)*(S.bottom-S.top)*.12,S.top,S.bottom)};
+          if(S.clear(q.x,q.y,L.u*1.3)&&AD.dist(prev,q)>L.u*3&&S.segClear(prev,q,L.u))got=q;
+        }
+        got=got||S.safeSpot(L.u*1.3,z)||S.randomSpot(L.u*2);
+        s.wp.push(got);prev=got;
+      });
+      if(!s.wp.length)s.wp.push(S.randomSpot(L.u*2));
       s.i=0;s.talkT=2;s.stop=0;s.lined=false;
       var dx=s.wp[0].x-L.x,dy=s.wp[0].y-L.y,dl=Math.hypot(dx,dy)||1;
       L.hold=true;L.face=dx>0?1:-1;L.dir=L.face;
@@ -342,7 +362,7 @@ var ACT={
         return;
       }
       if(s.stop>0){s.stop-=dt;s.m.forEach(function(m){m.hold=true;});if(s.stop<=0)s.m.forEach(function(m){m.hold=false;});return;}
-      if(arrived(L)){s.i++;if(s.i>=3||s.t>20){P.say(L,"とうちゃく！",1.3);s.m.forEach(function(a){a.hold=true;P.jump(a,3.2);});next(s);return;}
+      if(arrived(L)){s.i++;if(s.i>=s.wp.length||s.t>30){P.say(L,"とうちゃく！",1.3);s.m.forEach(function(a){a.hold=true;P.jump(a,3.2);});next(s);return;}
         go(L,s.wp[s.i].x,s.wp[s.i].y,.9);}
       /* うしろの子は、先頭が通った道をそのままたどる（しげみや文字にかぶらない） */
       s.trail=s.trail||[{x:L.x,y:L.y}];
