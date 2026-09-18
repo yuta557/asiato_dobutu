@@ -114,6 +114,7 @@ function scriptFor(a,b){
   return weighted(TALK.map(function(sc){return [sc,sc.w];}));
 }
 C.tick=function(dt){
+  if(P.bye){if(C.s)C.stop();return;}
   P.animals.forEach(function(a){if(a.chatCool>0)a.chatCool-=dt;});
   if(C.s){step(C.s,dt);return;}
   /* どこかで あそびが はじまっているときは、ほかの子は おしゃべりしない（あそびの じゃまをしない） */

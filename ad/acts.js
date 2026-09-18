@@ -66,7 +66,19 @@ function roll(s,missed,far){
   }
   best=best||{x:clamp(B.x+(S.W/2-B.x)*.3,P.U,S.W-P.U),y:clamp(B.y,S.top,S.bottom)};
   B.x0=B.x;B.y0=B.y;B.x1=best.x;B.y1=best.y;B.f=0;B.dur=.8;B.h=P.U*.8;B.fly=true;s.recv=null;s.fetch=null;
-  B.onLand=function(){if(P.sessions.indexOf(s)>=0)startFetch(s,missed,false);};
+  B.onLand=function(){
+    if(P.sessions.indexOf(s)<0)return;
+    /* とおくまで ころがったときは、ときどき みんなで とりに行く かけっこになる */
+    var far2=Math.hypot(B.x-(s.c?s.c.x:B.x),B.y-(s.c?s.c.y:B.y));
+    if(s.m.length>=2&&!s.raced&&(far||far2>P.U*2.4)&&Math.random()<.6){
+      s.raced=true;s.fetch={a:null,race:true,got:false,t:0,back:false,missed:missed,by:false};
+      P.say(missed,"まって〜、ボール〜！",1.3);
+      var o2=s.m.filter(function(a){return a!==missed&&alive(s,a);})[0];
+      P.later(.6,function(){if(alive(s,o2))P.say(o2,"だれが さきに とるかな？",1.4);});
+      return;
+    }
+    startFetch(s,missed,false);
+  };
 }
 /* ころがったボールを だれがとりにいくか：いちばん近い子。3びき以上なら、とりそこねた子のかわりに なかまが「とってあげる」。
    あそびに入っていない子が もっと近くにいたら、その子がひろって なげかえしてくれる */
@@ -88,13 +100,60 @@ function ringSpots(c,n,R){
   return out;
 }
 
+/* ---- かくれんぼの てつだい ---- */
+function alive2(a){return a&&P.animals.indexOf(a)>=0&&!a.leaving;}
+function hideNow(s){
+  [s.m[1],s.g].forEach(function(a,i){
+    if(!a||!alive(s,a))return;
+    a.hidden=true;a.hold=true;
+    if(i===0){a.x=s.hp.x;a.y=s.hp.y;}
+  });
+}
+/* おには 本当の しげみへ */
+function goSeek(s,k){
+  var stop=s.route&&s.route.length?s.route[0]:null,sp=stop?stop.p:s.b.seekSpot(k.x,k.u);
+  if(stop&&stop.rustle)P.note(stop.rustle.x,stop.rustle.y-stop.rustle.img.h*.7,"ガサッ","#5E9B4A");
+  go(k,sp.x,sp.y);
+}
+/* 2回に1回くらいは、ちがう場所を さきに さがす（すぐ一直線に行かない） */
+function seekRoute(s,k,h){
+  if(Math.random()<.45)return [];
+  var other=S.bushes.filter(function(b){return b!==s.b;})[0],kinds=[],u=k.u;
+  if(other){
+    kinds.push({p:other.seekSpot(k.x,u),go:"こっちの しげみかな？",at:"あれ、いないや"});
+    kinds.push({p:other.seekSpot(k.x,u),go:"いま、しげみが ゆれた！",at:"きのせい か〜",rustle:other});
+  }
+  var by=P.animals.filter(function(a){return !a.sess&&!a.leaving&&!a.hidden&&a!==k&&a!==h&&a.age>3.2;})
+    .sort(function(p,q){return AD.dist(k,p)-AD.dist(k,q);})[0];
+  if(by)kinds.push({p:{x:by.x+(by.x>k.x?-1:1)*(u+by.u)*.9,y:by.y},go:"あっ、"+by.sp.name+"！",at:"そこに かくれてた？",by:by,byLine:"わたし、かくれてないよ〜"});
+  var far=S.safeSpot(u,{x:S.W-s.b.x,y:s.b.y});
+  if(far)kinds.push({p:far,go:"こっちから おとが した！",at:"だれも いない…"});
+  if(!kinds.length)return [];
+  var out=[pick(kinds)];
+  if(Math.random()<.25){var more=kinds.filter(function(c){return c!==out[0];});if(more.length)out.push(pick(more));}
+  out.forEach(function(c){c.limit=4.5;});
+  return out;
+}
+
 var ACT={
   tag:{init:function(s){
       s.m.sort(function(p,q){return (S.clear(q.x,q.y,q.u)?1:0)-(S.clear(p.x,p.y,p.u)?1:0);});
-      s.c=s.m[1];s.r=s.m[0];s.dur=rand(9,12);s.swaps=0;s.pause=0;s.stun=0;s.rstun=0;s.minT=3.5;s.runAt=.4;s.talkT=2.4;
+      s.c=s.m[1];s.r=s.m[0];s.rs=[s.m[0]];
+      s.dur=rand(9,12);s.swaps=0;s.pause=0;s.stun=0;s.rstun=0;s.minT=3.5;s.runAt=.4;s.talkT=2.4;s.joinT=rand(4,6);
       P.say(s.c,"まてまて〜",1.3);},
-    update:function(s,dt){var c=s.c,r=s.r;
-      if(s.endSoon){c.hold=r.hold=true;c.sleep=false;s.es=(s.es||0)+dt;
+    update:function(s,dt){
+      var c=s.c;
+      s.rs=s.rs.filter(function(a){return alive(s,a);});
+      if(!s.rs.length)return true;
+      /* にげる子が 2ひきいるときは、近いほうを おいかける */
+      if(s.rs.indexOf(s.r)<0){s.r=s.rs[0];s.flee=null;}
+      if(s.rs.length>1){
+        var bd=AD.dist(c,s.r),bt=s.r;
+        s.rs.forEach(function(a){var d=AD.dist(c,a);if(d<bd*.8){bd=d;bt=a;}});
+        if(bt!==s.r){s.r=bt;s.flee=null;}
+      }
+      var r=s.r,others=s.rs.filter(function(a){return a!==r;});
+      if(s.endSoon){s.m.forEach(function(a){a.hold=true;});c.sleep=false;s.es=(s.es||0)+dt;
         /* おわりのあいさつは、重なったままにならないよう すこし間をあけて向かいあう */
         var ex=r.x-c.x,ey=r.y-c.y,ed=Math.hypot(ex,ey)||1,eg=(c.u+r.u)*.72;
         if(ed<eg){var ep=(eg-ed)*.35;c.x-=ex/ed*ep;c.y-=ey/ed*ep*.5;r.x+=ex/ed*ep;r.y+=ey/ed*ep*.5;}
@@ -105,6 +164,58 @@ var ACT={
       if(counting){s.pause-=dt;if(s.pause<=0){counting=false;P.say(c,"いくぞ〜！",1.1);}}
       c.hold=counting||s.stun>0;c.sleep=counting;r.hold=s.rstun>0;
       if(s.tt>s.runAt&&once(s,"run"))P.say(r,"にげろ〜",1.3);
+      /* ---- とちゅうから 入ってくる子 ---- */
+      if(!s.join&&!s.joined&&!s.noJoin&&!counting&&s.m.length<3&&s.t>s.joinT){
+        /* 入ってくるのは たまに（3回に1回くらい）。1回きめたら もう さそわない */
+        if(Math.random()<.35){
+          var g=P.animals.filter(function(a){return P.free(a)&&!a.chat&&!a.watch&&AD.dist(a,c)<P.U*9;})
+            .sort(function(p,q){return AD.dist(c,p)-AD.dist(c,q);})[0];
+          if(g)s.join={g:g,t:0,step:0};else s.noJoin=true;
+        }else s.noJoin=true;
+      }
+      if(s.join){
+        var J=s.join,jg=J.g;
+        if(!jg||jg.sess||jg.chat||jg.leaving||P.animals.indexOf(jg)<0)s.join=null;
+        else{
+          J.t+=dt;
+          if(J.step===0){J.step=1;P.say(jg,"なにしてるの〜？",1.4);}
+          else if(J.t>1.1&&J.step===1){J.step=2;faceTo(c,jg);P.say(c,"おいかけっこ！",1.2);}
+          else if(J.t>2.3&&J.step===2){J.step=3;P.say(jg,"ぼくも いれて〜！",1.4);P.jump(jg,3.4);}
+          else if(J.t>3.5&&J.step===3){
+            s.join=null;s.joined=true;s.dur+=rand(2,4);
+            jg.sess=s;jg.rest=0;jg.hold=false;jg.face=0;s.m.push(jg);s.rs.push(jg);
+            P.say(r,"にげろ〜！",1.3);
+          }
+          if(s.join)go(jg,c.x,c.y,1.2);
+        }
+      }
+      /* ---- にげる子が しげみに とびこんで やりすごす ---- */
+      if(!s.duck&&!s.ducked&&!s.noDuck&&!counting&&s.t>4.5&&!s.join){
+        var bb=S.bushes.slice().sort(function(p,q){return AD.dist(r,p)-AD.dist(r,q);})[0];
+        /* しげみの近くを通ったときだけ、たまに とびこむ */
+        if(bb&&AD.dist(r,bb)<P.U*5.5&&AD.dist(c,bb)>P.U*2.5){
+          if(Math.random()<.35){s.duck={b:bb,st:0,t:0,last:{x:r.x,y:r.y}};s.dur+=rand(2,4);}
+          else s.noDuck=true;
+        }
+      }
+      if(s.duck){
+        var D=s.duck,hp=D.b.hidePoint();D.t+=dt;
+        if(D.st===0){
+          go(r,hp.x,hp.y,1.7);go(c,D.last.x,D.last.y,1.4);c.face=0;
+          if(Math.hypot(r.x-hp.x,r.y-hp.y)<r.u*.5||D.t>3.5){D.st=1;D.t=0;r.hidden=true;r.hold=true;r.x=hp.x;r.y=hp.y;}
+          return;
+        }
+        if(D.st===1){
+          if(D.t>1.1&&once(s,"lost")){P.say(c,"あれ？ どこ いった〜？",1.5);var q=S.safeSpot(c.u,{x:c.x+(c.x<S.W/2?1:-1)*P.U*3,y:c.y})||P.roomySpot(c);go(c,q.x,q.y,1.1);}
+          if(D.t>3.2){
+            D.st=2;D.t=0;r.hidden=false;r.hold=false;r.rest=0;
+            P.say(r,"ここだよ〜！",1.3);P.jump(r,4.4);
+            P.later(.6,function(){if(alive(s,c))P.say(c,"あっ、そこか〜！",1.3);});
+            s.duck=null;s.ducked=true;s.flee=null;s.minT=s.tt+1.3;s.nearT=P.now;
+          }
+          return;
+        }
+      }
       var dx=r.x-c.x,dy=r.y-c.y,d=Math.hypot(dx,dy)||1;
       /* 走っている間の向きは 動いた方向だけで決める（止まったときに前の向きへ戻さない） */
       r.face=0;
@@ -112,8 +223,7 @@ var ACT={
       var grace=s.tt<s.minT;
       if(!c.hold){c.face=0;go(c,r.x,r.y,grace?1.15:1.5);}
       else if(Math.abs(dx)>c.u*.5)c.face=dx>0?1:-1;
-      /* タッチできないとき（はなれる時間中・数えている間・つかまった直後）は、重ならないようにする。
-         おには すこし下がり、にげる子は 前に出る。タッチできるときは はなさない（そうしないと つかまえられない） */
+      /* タッチできないとき（はなれる時間中・数えている間・つかまった直後）は、重ならないようにする */
       var canCatch=!c.hold&&s.tt>s.minT&&!s.endSoon,minGap=(c.u+r.u)*.6;
       if(!canCatch&&d<minGap){
         var push=(minGap-d)*(grace?.6:.45);
@@ -124,22 +234,32 @@ var ACT={
           if(P.now-(s.nearT==null?-9:s.nearT)>1.8){s.nearT=P.now;P.say(c,pick(["あとちょっと…","まてまて〜！"]),1.1);}
         }
       }
-      /* にげる先は しばらく決めたままにする（毎フレーム決めなおすと、左右にぶるぶる向きが変わる）
-         着いた・時間がたった・おにの方が先に近づいた ときだけ決めなおす */
+      /* にげる先は しばらく決めたままにする（毎フレーム決めなおすと、左右にぶるぶる向きが変わる） */
       s.fleeT=(s.fleeT||0)-dt;
       var F=s.flee,need=!F||s.fleeT<=0||Math.hypot(F.x-r.x,F.y-r.y)<r.u*.6||!S.clear(F.x,F.y,r.u)||
         Math.hypot(F.x-c.x,F.y-c.y)<Math.hypot(F.x-r.x,F.y-r.y)*.9;
       if(need&&P.now-(s.fleePick||-9)>.35){s.flee=pickFlee(s,r,c);s.fleePick=P.now;s.fleeT=rand(.9,1.4);}
       /* おにが目をつぶって数えている間は、しっかり距離をとる */
       if(s.flee)go(r,s.flee.x,s.flee.y,counting?1.8:1.45);
+      /* おいかけられていない子も、おにから はなれて にげまわる */
+      others.forEach(function(a){
+        a.hold=false;a.face=0;
+        a.fleeT=(a.fleeT||0)-dt;
+        var G=a.fleeP;
+        if(!G||a.fleeT<=0||Math.hypot(G.x-a.x,G.y-a.y)<a.u*.6||!S.clear(G.x,G.y,a.u)){
+          a.fleeP=pickFlee({flee:a.fleeP},a,c)||a.fleeP;a.fleeT=rand(1,1.6);
+        }
+        if(a.fleeP)go(a,a.fleeP.x,a.fleeP.y,1.3);
+      });
       s.talkT-=dt;
-      if(s.talkT<0&&!counting){s.talkT=rand(1.8,2.8);if(Math.random()<.5)P.say(r,pick(["にげろ〜","こっちだよ〜","きゃ〜！"]),1.2);else P.say(c,pick(["まてまて〜","まて〜！","つかまえるぞ〜"]),1.2);}
+      if(s.talkT<0&&!counting){s.talkT=rand(1.8,2.8);if(Math.random()<.5)P.say(pick(s.rs),pick(["にげろ〜","こっちだよ〜","きゃ〜！"]),1.2);else P.say(c,pick(["まてまて〜","まて〜！","つかまえるぞ〜"]),1.2);}
       if(canCatch&&Math.hypot(dx,dy*1.5)<(c.u+r.u)*.5){
         P.say(c,"タッチ！",1.1);P.jump(c,3.5);
         var caught=r,tagger=c;
         P.later(.5,function(){if(alive(s,caught))P.say(caught,"つかまった〜",1.2);});
         if(s.swaps<1){
-          s.swaps++;s.c=caught;s.r=tagger;s.flee=null;s.tt=0;s.flag={};
+          s.swaps++;s.c=caught;s.rs=s.rs.filter(function(a){return a!==caught;});s.rs.push(tagger);
+          s.r=tagger;s.flee=null;s.tt=0;s.flag={};
           /* 新しいおには 目をつぶって数える。にげる子は そのあいだに はなれる */
           s.pause=3.2;s.rstun=1.2;s.minT=3.2+3.5;s.runAt=1.6;s.dur=s.t+rand(10,12);s.talkT=5;
           P.later(1.1,function(){if(alive(s,caught))P.say(caught,"こんどは、おにだぞ〜",1.4);});
@@ -150,13 +270,14 @@ var ACT={
     },
     tap:function(s,a){var c=s.c,r=s.r;
       if(s.endSoon){tapLine(a,"tagEnd",["はあはあ…","いっぱい はしった〜"]);return;}
+      if(s.duck&&a===r){tapLine(a,"tagDuck",["しーっ、かくれてるの","ここなら みつからない〜"]);return;}
       if(a===c){
         if(s.pause>0){tapLine(a,"tagCount",["いま、かぞえてるの！","め、つぶってるよ〜"]);return;}
         tapLine(a,"tagOni",["わっ、じゃましないで〜！","おっとっと！","もう〜、にげられちゃう！"]);
         if(fx(s,1.2)){s.stun=1;P.jump(a,3);P.later(.4,function(){if(alive(s,r))P.say(r,"いまのうち〜！",1.2);});}
       }else{
         tapLine(a,"tagRun",["わっ、びっくりした！","きゃっ、おさないで〜","あぶない、あぶない！"]);
-        if(fx(s,1.2)){s.rstun=.55;P.jump(a,3.6);P.later(.35,function(){if(alive(s,c)&&!(s.pause>0))P.say(c,"チャンス！",1.1);});}
+        if(fx(s,1.2)){if(a===r)s.rstun=.55;P.jump(a,3.6);P.later(.35,function(){if(alive(s,c)&&!(s.pause>0))P.say(c,"チャンス！",1.1);});}
       }
     }},
 
@@ -179,6 +300,28 @@ var ACT={
           if(!B.fly){B.x=h.x+h.dir*h.u*.55;B.y=h.y;}s.wait=.6;next(s);}return;}
       if(s.st===2){if(once(s,"faceBye"))faceAll(h);return goodbye(s,h,s.m.filter(function(a){return a!==h;})[0],s.tt,.6);}
       if(B.fly)return;
+      if(s.fetch&&s.fetch.race){
+        var R=s.fetch;R.t+=dt;
+        if(!R.got){
+          s.m.forEach(function(a){if(!alive(s,a))return;a.hold=false;go(a,B.x-(B.x>a.x?1:-1)*a.u*.55,B.y,1.5);});
+          var win=s.m.filter(function(a){return alive(s,a)&&Math.hypot(a.x-B.x,a.y-B.y)<a.u*.75;})[0];
+          if(win||R.t>8){
+            R.got=true;R.t=0;R.a=win||s.m.filter(function(a){return alive(s,a);})[0];
+            R.a.hold=true;R.a.face=B.x>R.a.x?1:-1;R.a.dir=R.a.face;
+            P.say(R.a,"とってきたよ〜！",1.4);P.jump(R.a,3.8);
+            s.m.forEach(function(a){if(a!==R.a&&alive(s,a)){a.hold=false;go(a,a.spot.x,a.spot.y,1.2);
+              if(Math.random()<.5)P.later(.5,function(){if(alive(s,a))P.say(a,pick(["はやい〜","あ〜、まけた〜"]),1.2);});}});
+          }
+          return;
+        }
+        if(!R.back&&R.t>.7){R.back=true;R.a.hold=false;go(R.a,R.a.spot.x,R.a.spot.y,1.15);}
+        if(R.back){
+          B.x=R.a.x+R.a.dir*R.a.u*.55;B.y=R.a.y;
+          if(arrived(R.a)){R.a.hold=true;s.h=R.a;s.wait=.6;s.fetch=null;
+            if(R.a!==R.missed&&alive(s,R.missed))s.nextRecv=R.missed;}
+        }
+        return;
+      }
       if(s.fetch){
         var F=s.fetch,f=F.a;
         /* ひろいに来てくれた子が いなくなったら、なかまが かわりに */
@@ -222,6 +365,8 @@ var ACT={
         if(thanks)P.say(h,"はい、どうぞ！",1.1);
         else if(!strong&&Math.random()<.6)P.say(h,pick(n>2?["つぎ、"+rc.sp.name+"！","それっ","パス！"]:["それっ","パス！","いくよ〜","えいっ"]),1);
         B.x0=B.x;B.y0=B.y;B.x1=rc.x+rc.dir*rc.u*.55;B.y1=rc.y;B.f=0;B.dur=strong?1.15:.85;B.h=P.U*(strong?2.6:1.4);B.fly=true;s.recv=rc;
+        /* ときどき とりそこねて、ボールが ころがっていく */
+        if(!s.miss&&!s.raced&&s.kicks>1&&Math.random()<.14){s.miss=true;P.later(B.dur*.9,function(){if(alive(s,rc))P.say(rc,pick(["わっ、とれなかった〜","あっ、ボールが〜！"]),1.2);});}
         B.onLand=function(){
           if(!alive(s,rc))return;
           if(s.miss){s.miss=false;roll(s,rc,true);return;}
@@ -233,6 +378,10 @@ var ACT={
     tap:function(s,a){var B=s.ball;
       if(s.st===0){tapLine(a,"ball0",["いまから ボールあそび！","じゅんび、じゅんび"]);return;}
       if(s.st===2){tapLine(a,"ballEnd",["いっぱい パスしたね","ボール、じょうずでしょ"]);return;}
+      if(s.fetch&&s.fetch.race){
+        tapLine(a,"ballRace",s.fetch.got?["とれた〜！","もうすこし だったのに〜"]:["まって〜、ボール〜！","だれが さきに とるかな？","まけないぞ〜"]);
+        return;
+      }
       if(s.fetch){
         if(a===s.fetch.a)tapLine(a,"ballFetch",a===s.fetch.missed?["まって〜、ボール〜","いま、とりにいくの！"]:["とってあげるね〜","まかせて！"]);
         else tapLine(a,"ballWait",a===s.fetch.missed?["ありがとう〜","ごめんね〜"]:["はやく〜！","ここで まってるね"]);
@@ -257,20 +406,92 @@ var ACT={
     }},
 
   hide:{init:function(s){var k=s.m[0],h=s.m[1];
-      /* かくれる場所：いちばん近い しげみ（最初と同じ） */
+      /* かくれる場所：いちばん近い しげみ */
       s.b=S.bushes.slice().sort(function(p,q){return AD.dist(h,p)-AD.dist(h,q);})[0];
       s.hp=s.b.hidePoint();s.via=s.b.viaFor(h,h.u);
-      var first=s.via||s.hp;
-      k.hold=true;k.sleep=true;k.face=s.b.x>k.x?-1:1;P.say(k,"もういいかい？",1.6);go(h,first.x,first.y,1.35);},
-    update:function(s){var k=s.m[0],h=s.m[1],b=s.b;
-      if(s.st===0){if(s.tt>1.7&&once(s,"m"))P.say(h,"まあだだよ",1.3);
+      /* ときどき、その しげみには 先に だれかが いる（2ひきで いっしょに かくれる） */
+      if(Math.random()<.4){
+        var g=P.animals.filter(function(a){return P.free(a)&&!a.chat&&!a.watch&&a!==k&&a!==h;})
+          .sort(function(p,q){return AD.dist(s.b,p)-AD.dist(s.b,q);})[0];
+        if(g&&AD.dist(s.b,g)<P.U*16){
+          s.g=g;g.sess=s;g.rest=0;g.face=0;g.hold=false;s.m.push(g);
+          go(g,s.hp.x+(s.b.x>s.hp.x?.9:-.9)*g.u,s.hp.y+3,1.7);
+        }
+      }
+      k.hold=true;k.sleep=true;k.face=s.b.x>k.x?-1:1;P.say(k,"もういいかい？",1.6);go(h,(s.via||s.hp).x,(s.via||s.hp).y,1.35);},
+    update:function(s,dt){var k=s.m[0],h=s.m[1],b=s.b,g=s.g;
+      if(s.st===0){
+        if(s.tt>1.7&&once(s,"m"))P.say(h,"まあだだよ",1.3);
         if(s.via&&!s.viaDone&&(arrived(h)||s.tt>5)){s.viaDone=true;go(h,s.hp.x,s.hp.y,1.35);}
-        if(s.tt>.8&&((!s.via||s.viaDone)&&arrived(h)||s.tt>10)){h.hidden=true;h.hold=true;h.x=s.hp.x;h.y=s.hp.y;next(s);}}
-      else if(s.st===1){if(s.tt>.4&&once(s,"ok"))P.say(h,"もういいよ",1.4);
-        if(s.tt>1.9){k.sleep=false;k.hold=false;k.face=0;var sp=b.seekSpot(k.x,k.u);go(k,sp.x,sp.y);P.say(k,"どこかな〜？",1.3);next(s);}}
-      else if(s.st===2&&(arrived(k)||s.tt>9)){faceTo(k,h);k.hold=true;P.say(k,s.revealed?"そこだ〜！ みーつけた！":"みーつけた！",1.1);P.jump(h,5);
-        P.later(1.2,function(){if(alive(s,h))P.say(h,"みつかっちゃった〜",1.4);});next(s);}
-      else if(s.st===3){if(s.tt>2&&once(s,"faceBye")){faceTo(h,k);}return goodbye(s,k,h,s.tt,2.7);}
+        /* 先客との かけあい */
+        if(s.met){
+          s.mt+=dt;
+          if(s.mt>1.3&&once(s,"g1")){faceTo(g,h);P.say(g,"……。",1.1);}
+          if(s.mt>2.5&&once(s,"g2")){faceTo(h,g);P.say(h,"あれ？ もう だれか いる？",1.5);}
+          if(s.mt>4&&once(s,"g3"))P.say(g,"しーっ…",1.3);
+          if(s.mt>5.3){hideNow(s);next(s);}
+          return;
+        }
+        if(s.tt>.8&&(((!s.via||s.viaDone)&&arrived(h))||s.tt>10)){
+          if(g&&alive(s,g)&&(arrived(g)||s.tt>7)){
+            s.met=true;s.mt=0;h.hold=true;g.hold=true;h.x=s.hp.x;h.y=s.hp.y;
+            P.say(h,"ここなら みつからないかな？",1.6);return;
+          }
+          hideNow(s);next(s);
+        }
+      }
+      else if(s.st===1){
+        if(s.tt>.4&&once(s,"ok"))P.say(h,"もういいよ",1.4);
+        if(s.tt>1.9){
+          k.sleep=false;k.hold=false;k.face=0;
+          /* からだが しげみから はみ出ている子は すぐ見つかる */
+          s.big=P.headY(h)<b.y-b.img.h+h.u*.15;
+          s.route=s.big?[]:seekRoute(s,k,h);
+          if(s.big)P.say(k,"あれっ、からだ みえてるよ〜",1.5);
+          else P.say(k,s.route.length?s.route[0].go:"どこかな〜？",1.4);
+          goSeek(s,k);next(s);
+        }
+      }
+      else if(s.st===2){
+        s.wait=(s.wait||0)-dt;
+        var stop=s.route&&s.route.length?s.route[0]:null;
+        if(stop){
+          /* まちがえた場所：ついたら ひとこと 言って、つぎへ */
+          if(!stop.done&&(arrived(k)||s.tt>stop.limit)){
+            stop.done=true;k.hold=true;s.wait=1.3;
+            if(stop.by&&alive2(stop.by)){faceTo(k,stop.by);faceTo(stop.by,k);
+              P.say(k,stop.at,1.4);
+              P.later(1.1,function(){if(alive2(stop.by))P.say(stop.by,stop.byLine,1.4);});
+            }else P.say(k,stop.at,1.4);
+          }
+          if(stop.done&&s.wait<=0){s.route.shift();k.hold=false;s.tt=0;
+            if(s.route.length)P.say(k,s.route[0].go,1.4);
+            goSeek(s,k);}
+          return;
+        }
+        if(arrived(k)||s.tt>9){
+          faceTo(k,h);k.hold=true;
+          P.say(k,s.big?"やっぱり、ここだ〜！":s.revealed?"そこだ〜！ みーつけた！":"みーつけた！",1.2);P.jump(h,5);
+          h.hidden=false;h.hold=false;h.rest=.5;
+          P.later(1.2,function(){if(alive(s,h))P.say(h,s.big?"あっ、はみでてた〜":"みつかっちゃった〜",1.4);});
+          /* 先客が いるときは、気づくか、気づかないで さがしつづけるか */
+          s.two=g&&alive(s,g)?(Math.random()<.5?"now":"later"):null;
+          next(s);
+        }
+      }
+      else if(s.st===3){
+        if(s.two==="now"&&s.tt>2&&once(s,"g4")){
+          P.say(k,"あれ、ふたりも いる〜！",1.5);g.hidden=false;g.hold=false;g.rest=.5;P.jump(g,4);
+          P.later(1.2,function(){if(alive(s,g))P.say(g,"みつかっちゃった〜",1.3);});
+        }
+        if(s.two==="later"){
+          if(s.tt>2&&once(s,"g5"))P.say(k,"…まだ、だれか いる きがする",1.6);
+          if(s.tt>3.6&&once(s,"g6")){P.say(g,"ここだよ〜！",1.4);g.hidden=false;g.hold=false;g.rest=.5;P.jump(g,4.6);}
+          if(s.tt>4.9&&once(s,"g7"))P.say(k,"そこに いたの〜！",1.4);
+        }
+        if(s.tt>2&&once(s,"faceBye"))faceTo(h,k);
+        return goodbye(s,k,h,s.tt,s.two==="later"?6:s.two?4:2.7);
+      }
     },
     tap:function(s,a){var k=s.m[0],h=s.m[1],b=s.b;
       if(a===k){
@@ -279,11 +500,12 @@ var ACT={
         else tapLine(a,"hideDone",["みーつけた！","かくれるの、じょうずだね"]);
         return;
       }
+      if(a===s.g){tapLine(a,"hideGuest",["しーっ…","いっしょに かくれてるの","さきに かくれてたんだ"]);return;}
       if(s.st===0)tapLine(a,"hideGo",["いま、かくれるところ！","しーっ、ないしょね"]);
       else if(s.st===1){tapLine(a,"hideShh",["しーっ！","みつかっちゃうよ〜"]);
         if(fx(s,1.6))P.later(.6,function(){if(alive(s,k))P.say(k,"あれ？ いま、こえがした？",1.4);});}
       else if(s.st===2){tapLine(a,"hideOops",["あっ、こえ でちゃった！","しーっ…！"]);
-        if(!s.revealed){s.revealed=true;var sp=b.seekSpot(k.x,k.u);go(k,sp.x,sp.y,1.5);}}
+        if(!s.revealed){s.revealed=true;s.route=[];k.hold=false;goSeek(s,k);}}
       else tapLine(a,"hideFound",["みつかっちゃった〜","つぎは みつからないぞ〜"]);
     }},
 
@@ -587,6 +809,8 @@ X.onTapWatch=function(a){
   return true;
 };
 X.schedule=function(dt){
+  /* 「まっさらにする」で みんなが 帰るところは、あそびを はじめない */
+  if(P.bye)return;
   spectate(dt);
   if(AD.chat){AD.chat.tick(dt);if(AD.chat.holdPlay())return;}
   groupCool-=dt;bigCool-=dt;schedT-=dt;if(schedT>0)return;schedT=rand(1,2);

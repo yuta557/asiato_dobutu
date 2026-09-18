@@ -205,6 +205,8 @@ function triPoint(u){
   return {x:a.x+(b.x-a.x)*f,y:a.y+(b.y-a.y)*f};
 }
 function runDemo(dt){
+  /* みんなが 帰っていく あいだは、新しい子を うまない */
+  if(P.bye){if(demo.phase!=="idle")abortDemo();return;}
   if(P.reduced){staticGuide(dt||0);return;}
   var now=P.now,el=now-demo.t0;
   if(now-lastUser<=1.8||down){if(demo.phase!=="idle")abortDemo();return;}
@@ -288,9 +290,35 @@ function up(){
   tapAt(downPos,false);
 }
 cv.addEventListener("pointerup",up);cv.addEventListener("pointercancel",up);
-document.getElementById("reset").addEventListener("click",function(){
-  P.clearAll();strokes=[];uw={st:null,last:null,t:0};dw={st:null,last:null,t:0};pending=null;ripples=[];
+/* ---- 「まっさらにする」：すぐ消さずに、みんなで あいさつしてから 帰っていく ---- */
+function wipeNow(){
+  P.bye=false;P.clearAll();strokes=[];uw={st:null,last:null,t:0};dw={st:null,last:null,t:0};pending=null;ripples=[];
   abortDemo();lastUser=P.now;setTip(TIP0);
+}
+var BYEBYE=["えっ？","ばいばーい！","また あそぼうね！","またねー！","あそんでくれて ありがとう〜"];
+document.getElementById("reset").addEventListener("click",function(){
+  abortDemo();lastUser=P.now;
+  var live=P.animals.filter(function(a){return !a.leaving;});
+  /* もう帰りはじめているとき・だれもいないときは そのまま まっさらに */
+  if(P.bye||!live.length){wipeNow();return;}
+  P.bye=true;strokes=[];ripples=[];pending=null;
+  if(AD.chat)AD.chat.stop();
+  P.sessions.slice().forEach(function(s){X.end(s);});
+  live.sort(function(p,q){return p.x-q.x;});
+  live.forEach(function(a,i){
+    a.hold=true;a.rest=9;a.mult=1;a.hidden=false;a.sleep=false;a.cool=99;a.chatCool=99;
+    P.later(i*.3,function(){
+      if(P.animals.indexOf(a)<0)return;
+      a.face=a.x<S.W/2?1:-1;a.dir=a.face;
+      P.say(a,i<BYEBYE.length?BYEBYE[i]:pick(BYEBYE),1.7);P.jump(a,3.6);
+    });
+  });
+  var wait=Math.min(1.7+live.length*.3,3.4);
+  P.later(wait,function(){
+    P.animals.forEach(function(a){a.hold=false;a.sess=null;a.leaving=true;a.tx=a.x<S.W/2?-a.u*3:S.W+a.u*3;a.ty=a.y;a.mult=1.5;});
+    setTip("またね〜！");
+  });
+  P.later(wait+3.4,wipeNow);
 });
 
 /* ---- 図鑑（うまれかたの一覧を兼ねる） ---- */
@@ -379,7 +407,7 @@ function frame(dt){
     /* あそんでいる子が しげみの中に入ってしまったときは、しげみより手前に描く（体がかくれない）。
        かくれんぼで かくれている子は そのまま しげみのうしろ */
     var y=a.y;
-    if(a.sess&&!a.hidden&&a.sess.type!=="hide"){var b=P.bushHidden(a);if(b)y=b.y+.5;}
+    if(a.sess&&!a.hidden){var b=P.bushHidden(a);if(b)y=b.y+.5;}
     list.push({y:y,a:a});
   });
   S.bushes.forEach(function(b){list.push({y:b.y,b:b});});

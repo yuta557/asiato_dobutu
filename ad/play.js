@@ -140,7 +140,7 @@ function avoid(a,ux,uy){
    しげみは どうぶつより手前に描かれるので、しげみの絵の中に入ると 体が見えなくなる。
    かくれんぼ以外では、見えなくなる場所から すこしずつ ずれていく */
 P.bushHidden=function(a){
-  if(a.hidden||(a.sess&&a.sess.type==="hide"))return null;
+  if(a.hidden)return null;
   for(var i=0;i<S.bushes.length;i++){
     var b=S.bushes[i],hw=b.img.w*.5-a.u*.2;
     if(Math.abs(a.x-b.x)>hw)continue;

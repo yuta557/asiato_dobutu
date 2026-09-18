@@ -51,16 +51,6 @@ function lanes(n,x0,x1,u){
 }
 /* 何レーンまで ゆったり ならべるか（これより多い人数では あそびを始めない） */
 X.laneRoom=function(u){return Math.max(2,Math.floor((S.bottom-S.top-u*.5)/(u*1.05))+1);};
-/* スタート（ゴール）の線は、ならぶ高さ ぜんぶで 立てるところまで 内がわへ ずらす。
-   しげみの中だと 外へおし出されて、その子だけ 線より前に出てしまうため */
-function lineX(x,ys,u){
-  var dir=x<S.W/2?1:-1;
-  for(var i=0;i<16;i++){
-    if(ys.every(function(y){return S.clear(x,y,u);}))return x;
-    x+=dir*u*.45;
-  }
-  return x;
-}
 /* ならぶのに 間に合わなかった子。線のすぐ近くなら きっちりそろえ、
    とおくて まにあわない子は あそびから ぬけて 見ているがわにまわる（線より前から スタートしないように） */
 function lineUp(s,x,keep){
@@ -89,9 +79,7 @@ ACT.daruma={
     var sx=s.side<0?S.W-u*1.4:u*1.4;
     s.players=s.m.slice(1);s.caught=[];s.round=0;
     var ys=lanes(s.players.length,s.ox,sx,u);
-    sx=lineX(sx,ys,u);
     s.oy=ys.reduce(function(v,y){return v+y;},0)/ys.length;
-    if(!S.clear(s.ox,s.oy,u))s.ox=lineX(s.ox,[s.oy],u);
     go(oni,s.ox,s.oy,1.2);
     s.sx=sx;
     s.players.forEach(function(p,i){p.lane=ys[i];go(p,sx,ys[i],1.5);});
@@ -147,6 +135,12 @@ ACT.daruma={
         var mover=s.forced&&!s.forced.caught?s.forced:(Math.random()<.35?pick(active):null);
         s.forced=null;
         if(mover)catchOne(s,mover);
+        else if(active.length&&Math.random()<.7){
+          /* だれも うごかなかった回 */
+          P.say(oni,pick(["うごいた子、いないね〜","みんな じょうず〜"]),1.4);
+          var safe=pick(active);
+          P.later(.9,function(){if(alive(s,safe))P.say(safe,pick(["セーフ…！","ふう…","どきどき した〜"]),1.2);});
+        }
       }
       if(s.pt<=0){
         s.round++;
@@ -181,10 +175,11 @@ ACT.daruma={
 /* ふつうに歩いたときの1秒あたりの速さ（ぴょんと跳ねる子も おおよそ同じとみなす） */
 function p0Speed(s){var p=s.players[0];return p?p.u*1.55:40;}
 function startCall(s){
-  var oni=s.m[0];
-  s.phase="call";s.pt=rand(1.6,2.6);
+  var oni=s.m[0],quick=Math.random()<.3,slow=!quick&&Math.random()<.35;
+  /* ふりむく まで、はやかったり おそかったり。おなじ リズムに ならないように */
+  s.phase="call";s.pt=quick?rand(.7,1.1):slow?rand(2.8,3.6):rand(1.6,2.4);
   oni.face=s.side;oni.dir=s.side;oni.sleep=true;
-  P.say(oni,"だるまさんが〜",Math.max(1.2,s.pt));
+  P.say(oni,quick?"だるまさんがっ":slow?"だるまさんが〜〜〜":"だるまさんが〜",Math.max(1.2,s.pt));
 }
 function catchOne(s,p){
   var oni=s.m[0],u=maxU(s.m);
@@ -207,7 +202,6 @@ ACT.race={
     /* みんながいる側からスタートして、反対側がゴール */
     s.x0=cx<S.W/2?u*1.3:S.W-u*1.3;s.x1=cx<S.W/2?S.W-u*1.3:u*1.3;
     var ys=lanes(s.m.length,s.x0,s.x1,u);
-    s.x0=lineX(s.x0,ys,u);s.x1=lineX(s.x1,ys,u);
     s.m.forEach(function(a,i){a.lane=ys[i];go(a,s.x0,ys[i],1.5);});
     s.order=[];
     var gx=s.x1,top=Math.min.apply(null,ys)-u*.4,bot=Math.max.apply(null,ys)+u*.4;
@@ -309,12 +303,15 @@ ACT.tug={
   },
   update:function(s,dt){
     var u=maxU(s.m),c=s.c;
+    /* ほとんど その場のときは ゆっくり（あしが 高速で うごいて見えないように）。
+       つなに 引っぱられて はなれたときだけ、はやく ついていく */
     function track(mult){
-      s.L.forEach(function(a,i){go(a,s.base("L",i,c)+s.o,c.y,mult);});
-      s.R.forEach(function(a,i){go(a,s.base("R",i,c)+s.o,c.y,mult);});
+      function one(team,i,a){var x=s.base(team,i,c)+s.o;go(a,x,c.y,Math.abs(x-a.x)>a.u*.7?2.2:mult);}
+      s.L.forEach(function(a,i){one("L",i,a);});
+      s.R.forEach(function(a,i){one("R",i,a);});
     }
     if(s.st===0){
-      if(allThere(s)){
+      if(allThere(s,null,9)){
         s.L.forEach(function(a){a.face=1;a.dir=1;a.faceLock=true;a.hold=true;});
         s.R.forEach(function(a){a.face=-1;a.dir=-1;a.faceLock=true;a.hold=true;});
         next(s);
@@ -334,21 +331,22 @@ ACT.tug={
       var force=power(s.R)-power(s.L);
       var settling=(s.tie&&s.tt>s.tieAt)||s.tt>16;
       if(settling){
-        s.o+=(-s.o*3.2+force*u*.1)*dt;
+        s.o+=(-s.o*2+force*u*.1)*dt;
         if(once(s,"even"))P.note(s.c.x,s.c.y-u*1.15,"まんなか！",AD.INK);
       }else{
         /* なかなか決まらないときは だんだん かたむきを強くして 決着をつける */
         var push=s.tt>9?(s.tt-9)*.8:0;
         s.o+=(force*u*.9+(Math.sin(s.t*.8+s.wave)*.6+s.lean*(1+push))*u*.55)*dt;
       }
-      track(2.4);
+      /* つなを 引いている間は ほとんど その場なので、あしが 高速で うごいて見えないよう ゆっくりめに */
+      track(1.25);
       s.m.forEach(function(a){a.shake=Math.sin(P.now*18+a.seed)*a.u*.03;});
       s.chantT-=dt;
       if(s.chantT<=0){
         s.chantT=.75;s.chantSide^=1;var team=s.chantSide?s.R:s.L,tx=team.reduce(function(v,a){return v+a.x;},0)/team.length;
         P.note(tx,P.headY(team[0])-6,"よいしょ",AD.INK);
       }
-      var tieNow=settling&&(Math.abs(s.o)<u*.05||s.tt>18);
+      var tieNow=settling&&(Math.abs(s.o)<u*.06||s.tt>18);
       if((!settling&&Math.abs(s.o)>u*1.9)||tieNow){
         if(tieNow)s.o=0;
         s.m.forEach(function(a){a.shake=0;a.hold=true;});
