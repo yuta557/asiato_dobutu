@@ -812,6 +812,7 @@ X.schedule=function(dt){
   /* 「まっさらにする」で みんなが 帰るところは、あそびを はじめない */
   if(P.bye)return;
   spectate(dt);
+  /* だれかが おしゃべりしている間は、新しい あそびを はじめない */
   if(AD.chat){AD.chat.tick(dt);if(AD.chat.holdPlay())return;}
   groupCool-=dt;bigCool-=dt;schedT-=dt;if(schedT>0)return;schedT=rand(1,2);
   /* あそびは いつも1つだけ（2ひきのあそびと みんなのあそびが 同時に起きない） */

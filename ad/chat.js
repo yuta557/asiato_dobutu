@@ -56,8 +56,8 @@ function begin(a,b,sc){
   faceTo(a,b);faceTo(b,a);
   return s;
 }
-/* 「なにして あそぶ？」の話をしている間は、べつのあそびを始めない（話がむだにならないように） */
-C.holdPlay=function(){return !!(C.s&&C.s.play);};
+/* おしゃべりの とちゅうは、あそびを はじめない（話の じゃまを しない） */
+C.holdPlay=function(){return !!C.s;};
 /* おしゃべりを やめる（タップされたとき・あそびが始まったときなど） */
 C.stop=function(){
   var s=C.s;if(!s)return;
