@@ -44,7 +44,7 @@ def({key:"foot0",col:0,name:"ヒヨコ",motion:"hop",
   }});
 
 def({key:"foot1",col:1,name:"ウサギ",motion:"hop",
-  born:"ぴょん！",tap:["ぴょんぴょん！","にんじん、たべたいな","おみみ、ながいでしょ"],
+  born:"ぴょん！",tap:["ぴょんぴょん！","にんじん、ないかな〜","おみみ、ながいでしょ"],
   hello:["こんにちは、ぴょん","いっしょにはねよう！"],
   back:function(g,u,a,t,ci){
     g.save();g.fillStyle="#FFF9F4";g.strokeStyle="rgba(200,160,170,.7)";g.lineWidth=Math.max(1,u*.03);
