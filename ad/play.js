@@ -160,6 +160,9 @@ P.unhidePoint=function(x,y,u){
   return {x:x,y:y};
 };
 function bushStepOut(a,dt){
+  /* あそんでいる子は しげみより手前に えがかれるので、おし出さなくてよい。
+     おし出すと よーいどんの コースから はずれて 止まってしまう */
+  if(a.sess)return;
   var b=P.bushHidden(a);if(!b)return;
   var hw=b.img.w*.5+a.u*.25,dx=a.x-b.x;
   var left=-hw-dx,right=hw-dx,down=(b.y+4)-a.y;
@@ -236,7 +239,10 @@ P.update=function(dt){
     if(d<min&&d>.01){
       /* うまれたばかりで重なっているときは、はやく はなれる */
       var fast=(a.scatter>0||b.scatter>0)?3.2:1;
-      var k=(min-d)/d*.5*Math.min(1,dt*5*fast);a.x+=dx*k;b.x-=dx*k;a.y+=dy*k*.2;b.y-=dy*k*.2;
+      var k=(min-d)/d*.5*Math.min(1,dt*5*fast);
+      /* あそんでいる子は おされない（ゴールの線から 下がるなど、あそびが くずれるので）。外の子が よける */
+      var wa=a.sess&&!b.sess?0:(!a.sess&&b.sess?2:1),wb=2-wa;
+      a.x+=dx*k*wa;b.x-=dx*k*wb;a.y+=dy*k*.2*wa;b.y-=dy*k*.2*wb;
       a.bump=(a.bump||0)+dt*1.6*fast;a.bumpBy=b;b.bump=(b.bump||0)+dt*1.6*fast;b.bumpBy=a;
       if(fast>1)[a,b].forEach(function(z){
         if(z.sess||z.leaving||z.helping||z.age<1.1||P.now-(z.scatterT||-9)<1.5)return;

@@ -106,9 +106,8 @@ function playType(a,b){
 function scriptFor(a,b){
   var pt=pairTalk(a,b);
   if(pt&&Math.random()<.55)return {l:pt[1]?pt[0].l.map(function(ln){return [ln[0]?0:1,ln[1]];}):pt[0].l};
-  /* 「ひま〜」から あそびが はじまる話。ぜんぶの おしゃべりの 10回に1回くらい
-     （あそびが なにも起きていないときだけ さそえるので、そのときの確率は 高めにする） */
-  if(!P.sessions.length&&a.cool<=0&&b.cool<=0&&Math.random()<.45){
+  /* 「ひま〜」から あそびが はじまる話は、おしゃべり 10回に1回くらい */
+  if(!P.sessions.length&&a.cool<=0&&b.cool<=0&&Math.random()<.15){
     var type=playType(a,b),name=X.PLAY_NAME[type]||"あそび";
     return {play:type,l:BORED.map(function(ln){return [ln[0],ln[1].replace("PLAY",name)];})};
   }
@@ -117,6 +116,11 @@ function scriptFor(a,b){
 C.tick=function(dt){
   P.animals.forEach(function(a){if(a.chatCool>0)a.chatCool-=dt;});
   if(C.s){step(C.s,dt);return;}
+  /* どこかで あそびが はじまっているときは、ほかの子は おしゃべりしない（あそびの じゃまをしない） */
+  if(P.sessions.length){
+    P.animals.forEach(function(a){if(a.chatSeek){a.chatSeek=null;a.mult=1;}});
+    cool=Math.max(cool,rand(2,4));return;
+  }
   cool-=dt;
   /* 近づいた子どうしを さがす。少しはなれていても、ときどき じぶんから 近よっていく */
   var list=P.animals.filter(ready);

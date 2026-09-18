@@ -51,6 +51,26 @@ function lanes(n,x0,x1,u){
 }
 /* 何レーンまで ゆったり ならべるか（これより多い人数では あそびを始めない） */
 X.laneRoom=function(u){return Math.max(2,Math.floor((S.bottom-S.top-u*.5)/(u*1.05))+1);};
+/* スタート（ゴール）の線は、ならぶ高さ ぜんぶで 立てるところまで 内がわへ ずらす。
+   しげみの中だと 外へおし出されて、その子だけ 線より前に出てしまうため */
+function lineX(x,ys,u){
+  var dir=x<S.W/2?1:-1;
+  for(var i=0;i<16;i++){
+    if(ys.every(function(y){return S.clear(x,y,u);}))return x;
+    x+=dir*u*.45;
+  }
+  return x;
+}
+/* ならぶのに 間に合わなかった子。線のすぐ近くなら きっちりそろえ、
+   とおくて まにあわない子は あそびから ぬけて 見ているがわにまわる（線より前から スタートしないように） */
+function lineUp(s,x,keep){
+  s.m.slice().forEach(function(a){
+    if(Math.abs(a.x-x)<a.u*3.5||a===keep||s.m.length<=2){a.x=x;if(a.lane!=null)a.y=a.lane;return;}
+    var i=s.m.indexOf(a);s.m.splice(i,1);
+    if(s.players){var j=s.players.indexOf(a);if(j>=0)s.players.splice(j,1);}
+    a.sess=null;a.hold=false;a.face=0;a.faceLock=false;a.mult=1;a.lane=null;a.rest=rand(.3,1);a.cool=rand(4,8);
+  });
+}
 /* ならびがぜんぶ、しげみ・池・文字にかぶらない中心をさがす */
 function formation(s,u,posFn){
   var cx=0,cy=0;s.m.forEach(function(a){cx+=a.x;cy+=a.y;});
@@ -69,15 +89,20 @@ ACT.daruma={
     var sx=s.side<0?S.W-u*1.4:u*1.4;
     s.players=s.m.slice(1);s.caught=[];s.round=0;
     var ys=lanes(s.players.length,s.ox,sx,u);
+    sx=lineX(sx,ys,u);
     s.oy=ys.reduce(function(v,y){return v+y;},0)/ys.length;
+    if(!S.clear(s.ox,s.oy,u))s.ox=lineX(s.ox,[s.oy],u);
     go(oni,s.ox,s.oy,1.2);
-    s.players.forEach(function(p,i){p.lane=ys[i];go(p,sx,ys[i],1.2);});
+    s.sx=sx;
+    s.players.forEach(function(p,i){p.lane=ys[i];go(p,sx,ys[i],1.5);});
     P.say(oni,"わたしが おにね！",1.3);
   },
   update:function(s,dt){
     var oni=s.m[0],u=maxU(s.m),goalX=s.ox-s.side*u*1.1;
     if(s.st===0){
-      if(allThere(s)){
+      if(allThere(s,null,12)){
+        lineUp(s,s.sx,oni);oni.x=s.ox;oni.y=s.oy;
+        if(s.players.length<1)return true;
         s.m.forEach(function(a){a.hold=true;});
         oni.face=s.side;oni.dir=s.side;
         s.players.forEach(function(p){p.face=-s.side;p.dir=-s.side;});
@@ -182,9 +207,10 @@ ACT.race={
     /* みんながいる側からスタートして、反対側がゴール */
     s.x0=cx<S.W/2?u*1.3:S.W-u*1.3;s.x1=cx<S.W/2?S.W-u*1.3:u*1.3;
     var ys=lanes(s.m.length,s.x0,s.x1,u);
-    s.m.forEach(function(a,i){a.lane=ys[i];go(a,s.x0,ys[i],1.2);});
+    s.x0=lineX(s.x0,ys,u);s.x1=lineX(s.x1,ys,u);
+    s.m.forEach(function(a,i){a.lane=ys[i];go(a,s.x0,ys[i],1.5);});
     s.order=[];
-    var gx=s.x1+(s.x1>s.x0?1:-1)*u*.5,top=Math.min.apply(null,ys)-u*.4,bot=Math.max.apply(null,ys)+u*.4;
+    var gx=s.x1,top=Math.min.apply(null,ys)-u*.4,bot=Math.max.apply(null,ys)+u*.4;
     addProp(s,{y:S.top-5,draw:function(g){
       g.strokeStyle="rgba(255,255,255,.85)";g.lineWidth=Math.max(2,u*.08);g.setLineDash([u*.28,u*.2]);
       g.beginPath();g.moveTo(gx,top);g.lineTo(gx,bot);g.stroke();g.setLineDash([]);
@@ -198,7 +224,10 @@ ACT.race={
   update:function(s,dt){
     var u=maxU(s.m),dirX=s.x1>s.x0?1:-1;
     if(s.st===0){
-      if(allThere(s)){s.m.forEach(function(a){a.hold=true;a.face=dirX;a.dir=dirX;});next(s);}
+      if(allThere(s,null,12)){
+        lineUp(s,s.x0);
+        if(s.m.length<2)return true;
+        s.m.forEach(function(a){a.hold=true;a.face=dirX;a.dir=dirX;});next(s);}
       return;
     }
     if(s.st===1){
@@ -207,7 +236,8 @@ ACT.race={
       if(s.tt>1.5&&once(s,"c2"))P.say(caller,"よーい…",.9);
       if(s.tt>2.5&&once(s,"c3")){
         P.say(caller,"どん！",.9);
-        s.m.forEach(function(a){a.hold=false;a.spd=rand(1.2,1.6);});
+        /* 走る速さは どうぶつの あるきかたで ちがうので、みんなが ゴールできるように そろえる */
+        s.m.forEach(function(a){a.hold=false;a.spd=(a.sp.motion==="waddle"?2.4:a.sp.motion==="walk"?1.9:1.5)*rand(.95,1.12);});
         next(s);
       }
       return;
@@ -217,8 +247,8 @@ ACT.race={
         if(a.done)return;
         a.boost=Math.max(0,(a.boost||0)-dt);
         if(a.trip>0){a.trip-=dt;a.hold=true;a.shake=Math.sin(P.now*40)*a.u*.05;if(a.trip<=0){a.hold=false;a.shake=0;}return;}
-        go(a,s.x1,a.lane,a.boost>0?2.3:a.spd);
-        if(Math.abs(a.x-s.x1)<u*.45){
+        go(a,s.x1+dirX*a.u*.6,a.lane,a.boost>0?a.spd*1.5:a.spd);
+        if((a.x-s.x1)*dirX>-a.u*.06){
           a.done=true;a.hold=true;s.order.push(a);
           var place=s.order.length;
           if(place===1){P.say(a,"いちばん！",1.4);P.jump(a,4.6);P.note(a.x,P.headY(a)-8,"★","#E9A93B");}
@@ -226,7 +256,9 @@ ACT.race={
           else P.say(a,pick(["ゴール！","ついた〜"]),1.1);
         }
       });
-      if(s.m.every(function(a){return a.done;})||s.tt>14){s.winner=s.order[0]||s.m[0];next(s);}
+      if(s.m.every(function(a){return a.done;})||s.tt>20){
+        s.m.forEach(function(a){a.hold=true;});
+        s.winner=s.order[0]||s.m[0];next(s);}
       return;
     }
     if(s.st===3){
