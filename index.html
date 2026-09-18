@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>あしあとどうぶつ</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="なぞると足あと、タップで手形。足あとや手形がそのままどうぶつになって、草原であそびはじめる">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Yomogi&family=Zen+Kaku+Gothic+New:wght@400;500&family=Zen+Maru+Gothic:wght@500;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  color-scheme:light;
+  --bg:#F8F4EA; --card:#FFFFFF; --ink:#123F63; --ink-soft:#5A7E99; --line:#D6E5EF;
+  --yellow:#FFD43B; --wash-yellow:#FFF3CE; --leaf:#5E9B4A; --leaf-wash:#E6F1D6;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Zen Kaku Gothic New","Hiragino Kaku Gothic ProN","Yu Gothic",Meiryo,sans-serif;font-size:15.5px;line-height:1.8;-webkit-font-smoothing:antialiased}
+.page{max-width:1140px;margin:0 auto;padding:44px 24px 56px;display:flex;flex-direction:column;gap:26px}
+.head{display:grid;grid-template-columns:minmax(0,auto) minmax(0,1fr);gap:6px 40px;align-items:start}
+h1{margin:0;font-family:"Zen Maru Gothic",sans-serif;font-weight:700;font-size:clamp(32px,5.4vw,54px);line-height:1.15;letter-spacing:.02em}
+.lead{margin:0;max-width:36em;font-size:15.5px}
+.lead b{font-weight:500;background:linear-gradient(transparent 62%,var(--wash-yellow) 62%)}
+@media(max-width:760px){.head{grid-template-columns:1fr}.page{padding:30px 14px 44px;gap:22px}}
+
+.board{position:relative;border-radius:20px;border:1px solid var(--line);background:var(--card);overflow:hidden}
+.board-bar{display:flex;align-items:center;gap:10px;padding:10px 12px 10px 16px;border-bottom:1px solid var(--line);background:var(--bg);flex-wrap:wrap}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--line)}
+.board-title{font-size:13px;color:var(--ink-soft);margin-right:auto}
+.reset{font:inherit;font-size:12.5px;color:var(--ink);background:var(--card);border:1px solid var(--line);border-radius:999px;padding:5px 12px;cursor:pointer}
+.reset:hover{border-color:var(--ink-soft)}
+.reset:focus-visible{outline:3px solid var(--yellow);outline-offset:2px}
+.board-stage{position:relative;height:min(64vw,560px);min-height:340px;touch-action:none;background:#E4F0CC}
+#zoo{position:absolute;inset:0;width:100%;height:100%;display:block;cursor:crosshair}
+.ring{position:absolute;inset:0;pointer-events:none}
+/* 黄色のふちの「さわってね」。まえは影の太さを毎フレーム変えていて、草原ぜんたいを描きなおす原因になっていたので、
+   ふちは固定して「うすさ」だけを変える（描きなおしが起きない） */
+.ring::after{content:"";position:absolute;inset:0;box-shadow:inset 0 0 0 10px rgba(255,212,59,.95);opacity:0;will-change:opacity}
+.board.hint .ring::after{animation:ringFade 2.2s infinite}
+@keyframes ringFade{0%{opacity:1}70%,100%{opacity:0}}
+/* 草原の背景は うごかないので、べつの絵にしておき、毎フレーム描かない */
+#zoo-bg{position:absolute;inset:0;width:100%;height:100%;display:block;pointer-events:none}
+.demo-cursor{position:absolute;left:0;top:0;width:32px;height:32px;margin:-4px 0 0 -4px;pointer-events:none;opacity:0;transition:opacity .25s}
+.demo-cursor::after{content:"";position:absolute;inset:-11px;border-radius:50%;background:radial-gradient(circle,rgba(255,212,59,.7),rgba(255,212,59,0) 68%)}
+.demo-cursor.tap::after{animation:tapPulse .5s ease-out}
+@keyframes tapPulse{0%{transform:scale(.4)}100%{transform:scale(1.6);opacity:0}}
+.demo-cursor svg{position:relative;z-index:1}
+.tip{position:absolute;left:50%;bottom:14px;transform:translateX(-50%);display:flex;align-items:center;gap:10px;
+  background:var(--yellow);color:var(--ink);border-radius:999px;padding:9px 18px;font-size:14px;line-height:1.45;
+  max-width:calc(100% - 28px);width:max-content;pointer-events:none;text-align:center}
+.board.hint .tip{animation:tipBreath 1.5s ease-in-out infinite}
+@keyframes tipBreath{0%,100%{transform:translateX(-50%) scale(1)}50%{transform:translateX(-50%) scale(1.04)}}
+.tip .pip{width:9px;height:9px;border-radius:50%;background:var(--ink);flex:0 0 auto}
+.board.touched .tip{background:rgba(255,253,248,.93);color:var(--ink-soft);font-size:13px;box-shadow:0 0 0 1px var(--line)}
+.board.touched .tip .pip{display:none}
+.tip-sp{display:none}
+@media(max-width:900px),(hover:none) and (pointer:coarse){.tip-pc{display:none}.tip-sp{display:inline}}
+
+.zukan{display:grid;grid-template-columns:200px minmax(0,1fr);gap:16px 28px;align-items:center}
+.zukan h2{margin:0;font-family:"Zen Maru Gothic",sans-serif;font-size:21px;line-height:1.4}
+.zukan .count{display:block;font-family:"IBM Plex Mono",monospace;font-size:13px;color:var(--ink-soft);font-variant-numeric:tabular-nums;margin-top:2px}
+.zukan .rule{margin:8px 0 0;font-size:13px;color:var(--ink-soft);line-height:1.7}
+.cells{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px;margin:0;padding:0;list-style:none}
+.cell{display:flex;flex-direction:column;align-items:center;gap:0;padding:6px 2px 8px;border-radius:12px;border:1px dashed var(--line)}
+.cell.met{border-style:solid;background:var(--card)}
+.cell.fresh{animation:fresh .9s ease-out}
+@keyframes fresh{0%{background:var(--wash-yellow);transform:scale(1.08)}100%{transform:scale(1)}}
+.cell canvas{width:100%;max-width:104px;aspect-ratio:104/84;height:auto;display:block}
+.cell span{font-family:"Zen Maru Gothic",sans-serif;font-weight:700;font-size:13.5px;color:var(--ink)}
+.cell:not(.met) span{color:#A9BFCF;font-weight:500}
+.cell small{font-size:10.5px;color:var(--ink-soft)}
+.cell[role="button"]{cursor:pointer}
+.cell[role="button"]:hover{border-color:var(--ink-soft)}
+.cell:focus-visible{outline:3px solid var(--yellow);outline-offset:2px}
+.cell small.ask{color:var(--ink);border-bottom:1px dashed var(--ink-soft);line-height:1.5}
+@media(max-width:900px){.zukan{grid-template-columns:1fr}.cells{grid-template-columns:repeat(4,minmax(0,1fr))}}
+@media(max-width:480px){.cells{grid-template-columns:repeat(3,minmax(0,1fr))}}
+
+.how{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border-top:1px solid var(--line);padding:22px 0 0;margin:0;list-style:none}
+.how li{padding:0 22px;border-left:1px solid var(--line);display:flex;flex-direction:column;gap:4px}
+.how li:first-child{padding-left:0;border-left:0}
+.how .n{font-family:"IBM Plex Mono",monospace;font-size:12px;color:var(--ink-soft)}
+.how h3{margin:0;font-family:"Zen Maru Gothic",sans-serif;font-size:17.5px;line-height:1.5}
+.how p{margin:0;font-size:14px;color:var(--ink-soft);line-height:1.75}
+.plays{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 0;padding:0;list-style:none}
+.how .plays-note{margin:10px 0 0;font-size:12.5px;color:var(--ink-soft)}
+.plays li{padding:1px 10px;border:0;border-radius:999px;background:var(--leaf-wash);color:#3F6B31;font-size:12.5px;line-height:1.8}
+@media(max-width:760px){.how{grid-template-columns:1fr;gap:16px}.how li{padding:0;border-left:0}}
+.foot{margin:0;text-align:center;font-size:13.5px;color:var(--ink-soft)}
+@media(prefers-reduced-motion:reduce){.board.hint .ring::after,.board.hint .tip,.cell.fresh{animation:none}}
+
+/* さわる画面：長押しで文字選択やメニューが出ないように */
+.board-stage,.board-title,.cell{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}
+/* 指でさわる端末では、デモの矢印を消して「指のあと」の光だけにする */
+@media(hover:none) and (pointer:coarse){.demo-cursor svg{visibility:hidden}.demo-cursor::after{inset:-6px}}
+
+/* ---- スマホ（たて持ち） ---- */
+@media(max-width:600px){
+  body{font-size:14.5px}
+  .page{padding:20px 12px 36px;gap:18px}
+  .head{gap:6px}
+  h1{font-size:28px}
+  .lead{font-size:14px;line-height:1.7}
+  .board{border-radius:16px}
+  /* 上のバーは1行に：点を消して、タイトルは入りきらなければ「…」、ボタンは指で押しやすい大きさ */
+  .board-bar{flex-wrap:nowrap;gap:8px;padding:6px 8px 6px 12px}
+  .dot{display:none}
+  .board-title{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:12px}
+  .reset{flex:0 0 auto;min-height:36px;padding:6px 12px;font-size:12.5px}
+  /* 草原はたて長にして、あそぶ場所を広く（横向きのときは画面の高さに合わせる） */
+  .board-stage{height:min(125vw,72vh,540px);height:min(125vw,72svh,540px);min-height:360px}
+  /* 案内は草原に重ねず、草原の下に帯で出す */
+  .tip{position:static;transform:none;width:auto;max-width:none;border-radius:0;justify-content:center;
+    padding:10px 14px;font-size:13.5px;border-top:1px solid var(--line)}
+  .board.hint .tip{animation:none}
+  .board.hint .tip .pip{animation:pipPulse 1.5s ease-in-out infinite}
+  .board.touched .tip{box-shadow:none;background:var(--bg);font-size:13px}
+  .zukan{gap:10px}
+  .zukan h2{font-size:19px}
+  .cells{gap:6px}
+  .cell{padding:4px 2px 6px}
+  .cell span{font-size:13px}
+  .cell small{font-size:10px}
+  .cell small.ask{padding:4px 2px}
+  .how{padding-top:16px;gap:14px}
+  .how h3{font-size:16px}
+  .how p{font-size:13.5px}
+}
+@keyframes pipPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.5)}}
+@media(max-width:600px) and (prefers-reduced-motion:reduce){.board.hint .tip .pip{animation:none}}
+</style>
+</head>
+<body>
+<main class="page">
+  <header class="head">
+    <h1>あしあとどうぶつ</h1>
+    <p class="lead">なぞると足あと、タップすると手形。<b>なぞった形や、タップの回数で、うまれるどうぶつが変わります。</b>さんかくをなぞるとネコ、2回タップするとシマウマ。うまれたどうぶつは草原であそびはじめます。</p>
+  </header>
+
+  <div class="board hint" id="board">
+    <div class="board-bar">
+      <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+      <span class="board-title">まちであそぶボード — あしあとどうぶつ</span>
+      <button class="reset" id="reset" type="button">まっさらにする</button>
+    </div>
+    <div class="board-stage" id="stage">
+      <canvas id="zoo-bg" aria-hidden="true"></canvas>
+      <canvas id="zoo" aria-label="足あとや手形がどうぶつになってあそぶ草原のボード"></canvas>
+      <div class="ring"></div>
+      <div class="demo-cursor" id="democursor" aria-hidden="true">
+        <svg width="26" height="26" viewBox="0 0 26 26"><path d="M4 2 L20 12 L12.5 13.5 L9.5 21 Z" fill="#1B1A16" stroke="#FFFDF8" stroke-width="1.4" stroke-linejoin="round"/></svg>
+      </div>
+    </div>
+    <div class="tip" aria-live="polite"><span class="pip"></span><span id="tipText"><span class="tip-pc">ドラッグでなぞる形や、クリックの回数で、うまれるどうぶつが変わるよ</span><span class="tip-sp">指でなぞる形や、タップの回数で、うまれるどうぶつが変わるよ</span></span></div>
+  </div>
+
+  <section class="zukan" aria-labelledby="zk">
+    <div>
+      <h2 id="zk">であったどうぶつ<span class="count" id="count">0 / 12</span></h2>
+      <p class="rule">なぞる形と、タップの回数などで、うまれるどうぶつが変わります。</p>
+    </div>
+    <ul class="cells" id="cells"></ul>
+  </section>
+
+  <ol class="how">
+    <li><span class="n">1</span><h3>なぞる・タップする</h3><p>なぞったかたちやタップの回数でうまれる動物が決まります</p></li>
+    <li><span class="n">2</span><h3>かたちになる</h3><p>足あとは形の色に変わって寄りあつまり、大きな足あとに。かかとが顔、指先があしになります。手形は指があしやはね・トゲに、親指が首になります。</p></li>
+    <li><span class="n">3</span><h3>あそびはじめる</h3><p>どうぶつをタップすると、それぞれの声であいさつ。なかまが近くにいると、いろんなあそびをはじめます。</p>
+      <ul class="plays"><li>おいかけっこ</li><li>ボールあそび</li><li>かくれんぼ</li><li>ダンス</li><li>みずあび</li><li>ぎょうれつ</li></ul>
+      <p class="plays-note">4ひき以上そろうと、みんなで</p>
+      <ul class="plays"><li>だるまさんがころんだ</li><li>よーいどん</li><li>つなひき</li></ul>
+    </li>
+  </ol>
+
+  <p class="foot">当日は、同様の体験のデモ版を体験していただける予定です。</p>
+</main>
+
+<script src="ad/prints.js"></script>
+<script src="ad/species-foot.js"></script>
+<script src="ad/species-hand.js"></script>
+<script src="ad/gesture.js"></script>
+<script src="ad/scene.js"></script>
+<script src="ad/play.js"></script>
+<script src="ad/acts.js"></script>
+<script src="ad/acts-group.js"></script>
+<script src="ad/debug.js"></script>
+<script src="ad/main.js"></script>
+</body>
+</html>
