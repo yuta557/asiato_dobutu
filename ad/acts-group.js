@@ -63,6 +63,8 @@ ACT.daruma={
     }
     if(s.st===2)return goodbye(s,s.winner||oni,s.winner?oni:s.players[0],s.tt,1.6);
     var active=s.players.filter(function(p){return !p.caught;});
+    /* おにのところに ついた子は、そこで待つ */
+    s.caught.forEach(function(p){if(!p.hold&&arrived(p)){p.hold=true;p.mult=1;p.face=-s.side;p.dir=p.face;}});
     active.forEach(function(p){
       p.dash=Math.max(0,(p.dash||0)-dt);
       p.wob=Math.max(0,(p.wob||0)-dt);
@@ -138,12 +140,13 @@ function startCall(s){
 function catchOne(s,p){
   var oni=s.m[0],u=maxU(s.m);
   if(p.caught)return;
-  p.wob=.6;P.say(oni,p.sp.name+"、いま うごいた！",1.4);
-  P.later(.7,function(){
+  p.wob=.5;P.say(oni,p.sp.name+"、いま うごいた！",1.4);
+  /* 言われたら すぐに、はやあしで おにのところへ */
+  P.later(.4,function(){
     if(!alive(s,p)||p.caught)return;
     p.caught=true;s.caught.push(p);p.shake=0;p.hold=false;
     var k=s.caught.length;
-    go(p,s.ox-s.side*u*.2,clamp(s.oy+u*1.2*Math.ceil(k/2)*(k%2?1:-1),S.top,S.bottom),1.2);
+    go(p,s.ox-s.side*u*.2,clamp(s.oy+u*1.2*Math.ceil(k/2)*(k%2?1:-1),S.top,S.bottom),2.4);
     P.say(p,"つかまった〜",1.2);
   });
 }
