@@ -295,7 +295,7 @@ function wipeNow(){
   P.bye=false;P.clearAll();strokes=[];uw={st:null,last:null,t:0};dw={st:null,last:null,t:0};pending=null;ripples=[];
   abortDemo();lastUser=P.now;setTip(TIP0);
 }
-var BYEBYE=["えっ？","ばいばーい！","また あそぼうね！","またねー！","あそんでくれて ありがとう〜"];
+var BYEBYE=["えっ？","もう終わり？","また あそぼうね！","またねー！","あそんでくれて ありがとう〜"];
 document.getElementById("reset").addEventListener("click",function(){
   abortDemo();lastUser=P.now;
   var live=P.animals.filter(function(a){return !a.leaving;});
