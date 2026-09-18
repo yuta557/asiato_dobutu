@@ -462,10 +462,12 @@ var PLAY_NAME={tag:"おいかけっこ",ball:"ボールあそび",hide:"かく�
   daruma:"だるまさんがころんだ",race:"よーいどん",tug:"つなひき"};
 X.PLAY_NAME=PLAY_NAME;
 var REPLY=["いいよ〜！","やろう、やろう！","うん、あそぼ！"];
-X.start=function(type,m){
+X.start=function(type,m,quiet){
   var s={type:type,m:m,t:0,tt:0,st:0,flag:{},prep:{t:0,said:0}};
   m.forEach(function(a){a.sess=s;a.rest=0;a.face=0;a.hold=true;});
   P.sessions.push(s);
+  /* おしゃべりから はじまるときは、もう さそいあったあとなので すぐ はじめる */
+  if(quiet){s.prep=null;m.forEach(function(a){a.hold=false;a.face=0;});ACT[type].init(s);return s;}
   var inv=m[0],name=PLAY_NAME[type]||"あそび";
   P.say(inv,(m.length>=3?"みんなで "+name:name)+"、しよう！",1.6);P.jump(inv,3.2);
   m.forEach(function(a){if(a!==inv)faceTo(a,inv);});
@@ -586,6 +588,7 @@ X.onTapWatch=function(a){
 };
 X.schedule=function(dt){
   spectate(dt);
+  if(AD.chat){AD.chat.tick(dt);if(AD.chat.holdPlay())return;}
   groupCool-=dt;bigCool-=dt;schedT-=dt;if(schedT>0)return;schedT=rand(1,2);
   /* あそびは いつも1つだけ（2ひきのあそびと みんなのあそびが 同時に起きない） */
   if(P.sessions.length||groupCool>0)return;

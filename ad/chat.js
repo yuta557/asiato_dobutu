@@ -1,0 +1,148 @@
+/* すれちがったときの おしゃべり（あそびが はじまっていないとき）
+   ・近くに来た2ひきが 立ちどまって ひとこと ふたこと
+   ・どうぶつの組み合わせだけの かけあいも ある
+   ・10回に1回くらい、その話から ほんとうに あそびが はじまる */
+(function(){
+"use strict";
+var AD=window.AD,S=AD.scene,P=AD.play,X=AD.acts,H=X.h,pick=AD.pick,rand=AD.rand;
+var C=AD.chat={},go=H.go,faceTo=H.faceTo,weighted=H.weighted;
+
+/* ふつうの おしゃべり。[はなす子(0か1)、ことば] のじゅんばん。
+   together は、はなしたあと ふたりで おなじ ほうへ あるいていく */
+var TALK=[
+  {w:1.4,l:[[0,"あ、こんにちは〜"],[1,"こんにちは〜！"]]},
+  {w:1.1,l:[[0,"なにして るの？"],[1,"おさんぽ してるの"],[0,"いいね〜"]]},
+  {w:1.1,l:[[0,"どこ いくの〜？"],[1,"あっちの ほう！"],[0,"ついて いっていい？"],[1,"いいよ〜"]],together:true},
+  {w:1,l:[[0,"いっしょに いく？"],[1,"うん、いく！"]],together:true},
+  {w:.9,l:[[0,"おんなじ ほうに いこう！"],[1,"そうしよう！"]],together:true},
+  {w:.9,l:[[0,"こっちも おいで〜"],[1,"いま いくよ〜"]],together:true},
+  {w:.8,l:[[0,"あそぶ？"],[1,"あとで あそぼ〜"]]},
+  {w:.8,l:[[0,"げんき？"],[1,"げんき！"],[0,"よかった〜"]]},
+  {w:.7,l:[[0,"おはな、みつけたよ"],[1,"わあ、きれい〜"]]},
+  {w:.7,l:[[0,"くさが ふわふわ〜"],[1,"ほんとだ〜"]]}
+];
+/* この2ひきが そろったときだけの かけあい（k の じゅんばんで 0・1 が きまる） */
+var PAIR=[
+  {k:["foot4","hand4"],w:2,l:[[0,"にゃーん"],[1,"がおーっ"],[0,"……にゃ？"],[1,"ねこじゃないよ！"]]},
+  {k:["foot0","foot2"],w:1.4,l:[[0,"おはな、なが〜い！"],[1,"ぱおーん、さわってみる？"],[0,"ぴよっ！"]]},
+  {k:["foot1","foot3"],w:1.4,l:[[0,"にんじん、ない？"],[1,"はちみつ なら あるよ"],[0,"……ちがうの〜"]]},
+  {k:["hand0","foot5"],w:1.4,l:[[0,"たかいとこ、どう？"],[1,"ユーカリ、みえる？"],[0,"はっぱなら いっぱい！"]]},
+  {k:["hand3","hand5"],w:1.6,l:[[0,"ひひーん！"],[1,"ひひん！"],[0,"しましま、いいなあ"],[1,"かして あげられないの〜"]]},
+  {k:["foot0","hand2"],w:1.6,l:[[0,"おおきい〜！"],[1,"ぎゃおー！"],[0,"ぴよっ！？"],[1,"あっ、ごめん…"]]},
+  {k:["hand1","foot1"],w:1.4,l:[[0,"かたあし、できる？"],[1,"ぴょん！……むずかしい〜"]]},
+  {k:["foot5","foot4"],w:1.4,l:[[0,"ねむいなあ…"],[1,"ごろごろ…"],[0,"いっしょに おひるね…"]]},
+  {k:["foot2","hand2"],w:1.4,l:[[0,"ずしーん、って きこえた"],[1,"ぼくの あしおと！"]]},
+  {k:["foot3","foot0"],w:1.4,l:[[0,"ぎゅーって しよう"],[1,"やさしく してね〜"]]},
+  {k:["hand0","foot0"],w:1.2,l:[[0,"うえから こんにちは〜"],[1,"ぴよ〜、とどかない！"]]},
+  {k:["hand4","hand5"],w:1.2,l:[[0,"しましま なかま！"],[1,"もようが ちがうよ〜"]]}
+];
+/* ひま〜 から あそびが はじまる話（ときどきだけ） */
+var BORED=[[0,"ひま〜"],[1,"あそぶ？"],[0,"なにして あそぶ？"],[1,"うーん……"],[1,"PLAY！"],[0,"いいよ！"]];
+
+var cool=rand(3,6);
+C.s=null;
+
+function busy(a){return !!(a.sess||a.chat||a.watch||a.helping||a.hidden||a.leaving);}
+/* おしゃべりできる子：あそんでいない・見まもっていない・あそび場の中にいない */
+function ready(a){
+  return P.free(a)&&!busy(a)&&a.age>4&&(a.chatCool||0)<=0&&!(P.area&&P.inArea(a.x,a.y,a.u,null));
+}
+function stillOK(a){return a&&P.animals.indexOf(a)>=0&&!a.leaving&&!a.sess&&!a.watch&&!(P.area&&P.inArea(a.x,a.y,a.u,null));}
+
+function begin(a,b,sc){
+  var s={m:[a,b],l:sc.l,gap:1.35,t:0,i:0,together:sc.together,play:sc.play};
+  C.s=s;
+  [a,b].forEach(function(x){x.chat=s;x.chatSeek=null;x.hold=true;x.rest=1;x.mult=1;});
+  faceTo(a,b);faceTo(b,a);
+  return s;
+}
+/* 「なにして あそぶ？」の話をしている間は、べつのあそびを始めない（話がむだにならないように） */
+C.holdPlay=function(){return !!(C.s&&C.s.play);};
+/* おしゃべりを やめる（タップされたとき・あそびが始まったときなど） */
+C.stop=function(){
+  var s=C.s;if(!s)return;
+  s.m.forEach(function(a){if(a.chat===s){a.chat=null;a.hold=false;a.face=0;a.rest=rand(.2,.8);a.chatCool=rand(12,22);}});
+  C.s=null;cool=rand(4,8);
+};
+function finish(s){
+  var a=s.m[0],b=s.m[1];
+  s.m.forEach(function(x){if(x.chat===s){x.chat=null;x.hold=false;x.face=0;x.chatCool=rand(12,22);}});
+  C.s=null;cool=rand(5,10);
+  if(s.play&&stillOK(a)&&stillOK(b)&&!P.sessions.length){X.start(s.play,[a,b],true);return;}
+  if(s.together&&stillOK(a)&&stillOK(b)){
+    /* ふたりで おなじほうへ。ならんで あるけるよう、すこしずらす */
+    var p=P.roomySpot(a),d=(a.u+b.u)*.7;
+    go(a,p.x-d*.5,p.y);go(b,p.x+d*.5,p.y+2);
+    a.rest=0;b.rest=0;
+  }else{a.rest=rand(.2,1);b.rest=rand(.2,1);}
+}
+function step(s,dt){
+  var a=s.m[0],b=s.m[1];
+  if(!stillOK(a)||!stillOK(b)){C.stop();return;}
+  s.t+=dt;
+  while(s.i<s.l.length&&s.t>=s.i*s.gap){
+    var ln=s.l[s.i],who=ln[0]?b:a,to=ln[0]?a:b;
+    faceTo(who,to);faceTo(to,who);
+    P.say(who,ln[1],1.5);
+    if(s.i===0)P.jump(who,2.2);
+    s.i++;
+  }
+  if(s.i>=s.l.length&&s.t>s.l.length*s.gap+.4)finish(s);
+}
+/* この2ひきだけの かけあいを さがす */
+function pairTalk(a,b){
+  var out=[];
+  PAIR.forEach(function(sc){
+    if(a.sp.key===sc.k[0]&&b.sp.key===sc.k[1])out.push([sc,false]);
+    else if(b.sp.key===sc.k[0]&&a.sp.key===sc.k[1])out.push([sc,true]);
+  });
+  return out.length?pick(out):null;
+}
+function playType(a,b){
+  var ele=a.sp.key==="foot2"||b.sp.key==="foot2";
+  return weighted([["tag",3],["ball",2],["hide",2],["dance",2],["mizu",ele?3:1]]);
+}
+/* どの話をするか えらぶ */
+function scriptFor(a,b){
+  var pt=pairTalk(a,b);
+  if(pt&&Math.random()<.55)return {l:pt[1]?pt[0].l.map(function(ln){return [ln[0]?0:1,ln[1]];}):pt[0].l};
+  /* 「ひま〜」から あそびが はじまる話。ぜんぶの おしゃべりの 10回に1回くらい
+     （あそびが なにも起きていないときだけ さそえるので、そのときの確率は 高めにする） */
+  if(!P.sessions.length&&a.cool<=0&&b.cool<=0&&Math.random()<.45){
+    var type=playType(a,b),name=X.PLAY_NAME[type]||"あそび";
+    return {play:type,l:BORED.map(function(ln){return [ln[0],ln[1].replace("PLAY",name)];})};
+  }
+  return weighted(TALK.map(function(sc){return [sc,sc.w];}));
+}
+C.tick=function(dt){
+  P.animals.forEach(function(a){if(a.chatCool>0)a.chatCool-=dt;});
+  if(C.s){step(C.s,dt);return;}
+  cool-=dt;
+  /* 近づいた子どうしを さがす。少しはなれていても、ときどき じぶんから 近よっていく */
+  var list=P.animals.filter(ready);
+  for(var i=0;i<list.length;i++){
+    var a=list[i];
+    if(a.chatSeek){
+      var b=a.chatSeek.b;
+      a.chatSeek.t-=dt;
+      if(!ready(b)||a.chatSeek.t<=0||!stillOK(a)){a.chatSeek=null;a.mult=1;continue;}
+      var dd=AD.dist(a,b),near=(a.u+b.u)*1.15;
+      if(dd<near*1.25){a.chatSeek=null;a.mult=1;if(cool<=0)begin(a,b,scriptFor(a,b));return;}
+      var k=(dd-near)/dd;go(a,a.x+(b.x-a.x)*k,a.y+(b.y-a.y)*k,1.1);
+    }
+  }
+  if(cool>0)return;
+  var best=null,bd=1e9;
+  for(var p=0;p<list.length;p++)for(var q=p+1;q<list.length;q++){
+    var m=list[p],n=list[q],d=AD.dist(m,n);
+    if(d<(m.u+n.u)*1.6&&d<bd){bd=d;best=[m,n];}
+  }
+  if(best){begin(best[0],best[1],scriptFor(best[0],best[1]));return;}
+  /* 近くに だれもいなければ、1ぴきが 話しかけに 歩いていく */
+  if(list.length>=2&&Math.random()<.5){
+    var who=pick(list),mate=list.filter(function(o){return o!==who;}).sort(function(u,v){return AD.dist(who,u)-AD.dist(who,v);})[0];
+    if(mate&&AD.dist(who,mate)<P.U*9)who.chatSeek={b:mate,t:6};
+  }
+  cool=rand(1.5,3);
+};
+})();

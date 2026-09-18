@@ -272,6 +272,8 @@ function up(){
       if(X.onTapAfter(a))return;
       /* みんなのあそびを 見まもっている子 */
       if(X.onTapWatch(a))return;
+      /* おしゃべり中にタップされたら、話をやめて タップにこたえる */
+      if(a.chat&&AD.chat)AD.chat.stop();
       if(a.hidden){P.say(a,"しーっ！",1.1);return;}
       /* 続けてタップしている間は同じあいさつ。間があいたら別のあいさつにする */
       if(!a.tapLine||P.now-a.lastTap>1.6){

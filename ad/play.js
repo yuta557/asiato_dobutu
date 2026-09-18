@@ -58,7 +58,7 @@ P.note=function(x,y,text,col){P.notes.push({x:x,y:y,text:text,born:P.now,dur:1.3
 P.headY=function(a){return a.y-a.z-a.u*(a.sp.top||TOP[a.sp.key]||(a.sp.kind==="hand"?1.95:2.15));};
 P.jump=function(a,k){if(a.z===0&&a.vz===0)a.vz=a.u*(k||4);};
 /* うまれてすぐ（3秒）は、あそびにさそわない（「〇〇だよ！」の名のりを さいごまで見せる） */
-P.free=function(a){return !a.sess&&!a.leaving&&!a.helping&&a.age>3.2;};
+P.free=function(a){return !a.sess&&!a.leaving&&!a.helping&&!a.chat&&a.age>3.2;};
 
 P.spawn=function(sp,x,y,mode,grow){
   var a={sp:sp,x:x,y:clamp(y,S.top,S.bottom),z:0,vz:0,dir:Math.random()<.5?1:-1,ph:0,moving:false,land:0,
