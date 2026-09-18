@@ -599,6 +599,8 @@ X.schedule=function(dt){
     if(Math.random()<chance){
       var list=Object.keys(X.GROUP).map(function(k){return [k,X.GROUP[k].weight||1];});
       var type=weighted(list),g=X.GROUP[type],n=Math.min(avail.length,g.max||5);
+      /* 横一列にならぶあそびは、ならべる本数までにする（ぎゅうぎゅうにならない） */
+      if(g.lanes&&X.laneRoom)n=Math.min(n,X.laneRoom(P.U));
       if(g.even)n-=n%2;
       /* ひと休みが終わっている子から先に入れる */
       avail.sort(function(p,q){return (p.cool>0?1:0)-(q.cool>0?1:0)||Math.random()-.5;});

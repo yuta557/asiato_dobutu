@@ -16,7 +16,7 @@ function lanes(n,x0,x1,u){
   for(var i=0;i<=28;i++){
     var y=top+(bot-top)*i/28;if(!S.laneOK(y,x0,x1,u))continue;
     c.push(y);
-    /* しげみにかくれない高さを ゆうせんする（しげみの手前を通る＝しげみより下、または しげみの絵より上） */
+    /* しげみにかくれない高さ（しげみの手前を通る＝しげみより下、または しげみの絵より上） */
     var ok=true,lo=Math.min(x0,x1),hi=Math.max(x0,x1);
     for(var k=0;k<S.bushes.length&&ok;k++){
       var b=S.bushes[k],bl=b.x-b.img.w*.5-u*.3,br=b.x+b.img.w*.5+u*.3;
@@ -26,20 +26,31 @@ function lanes(n,x0,x1,u){
     }
     if(ok)cNoBush.push(y);
   }
-  if(cNoBush.length>=n)c=cNoBush;
-  if(c.length<n){var e=[];for(var j=0;j<n;j++)e.push(top+(bot-top)*(n===1?.5:j/(n-1)));return e;}
-  for(var gap=u*1.25;gap>u*.4;gap*=.85){
-    var picked=[c[0]];
-    for(var k=1;k<c.length&&picked.length<n;k++)if(c[k]-picked[picked.length-1]>=gap)picked.push(c[k]);
-    if(picked.length>=n){
-      /* 上にかたよらないよう、えらんだ高さを 使える範囲のまんなかへ寄せる */
-      var span=picked[n-1]-picked[0],room=(c[c.length-1]-c[0])-span,shift=room/2,out=picked.slice(0,n).map(function(y){return y+shift;});
-      if(out.every(function(y){return S.laneOK(y,x0,x1,u);}))return out;
-      return picked.slice(0,n);
+  /* ならぶ間かくは どうぶつの大きさぶん（u*1.05）はあける。
+     せますぎて ならべないときは、しげみをよける条件をはずす（あそび中は しげみの手前に描かれるので かくれない） */
+  var MIN=u*1.05;
+  function greedy(list){
+    if(list.length<n)return null;
+    for(var gap=u*1.5;gap>=MIN;gap*=.9){
+      var picked=[list[0]],k;
+      for(k=1;k<list.length&&picked.length<n;k++)if(list[k]-picked[picked.length-1]>=gap)picked.push(list[k]);
+      if(picked.length>=n){
+        var span=picked[n-1]-picked[0],room=(list[list.length-1]-list[0])-span,out=picked.slice(0,n).map(function(y){return y+room/2;});
+        if(out.every(function(y){return S.laneOK(y,x0,x1,u);}))return out;
+        return picked.slice(0,n);
+      }
     }
+    return null;
   }
-  return c.slice(0,n);
+  var res=greedy(cNoBush)||greedy(c);
+  if(res)return res;
+  /* どうしても入らないときは、使える高さいっぱいに 等間かくで */
+  var lo2=c.length?c[0]:top,hi2=c.length?c[c.length-1]:bot,e=[];
+  for(var j=0;j<n;j++)e.push(n===1?(lo2+hi2)/2:lo2+(hi2-lo2)*j/(n-1));
+  return e;
 }
+/* 何レーンまで ゆったり ならべるか（これより多い人数では あそびを始めない） */
+X.laneRoom=function(u){return Math.max(2,Math.floor((S.bottom-S.top-u*.5)/(u*1.05))+1);};
 /* ならびがぜんぶ、しげみ・池・文字にかぶらない中心をさがす */
 function formation(s,u,posFn){
   var cx=0,cy=0;s.m.forEach(function(a){cx+=a.x;cy+=a.y;});
@@ -286,9 +297,18 @@ ACT.tug={
     if(s.st===2){
       function power(team){return team.reduce(function(v,a){a.weak=Math.max(0,(a.weak||0)-dt);return v+a.pow*(a.weak>0?.2:1)*(1+.35*Math.sin(P.now*3.1+a.seed));},0);}
       /* 力くらべ＋ゆっくりした「波」。どちらかに少しずつ かたむいて、10秒くらいで決着がつく */
-      if(s.wave==null){s.wave=rand(0,PI*2);s.lean=pick([-1,1])*rand(.25,.45);}
+      /* 4〜5回に1回くらいは ひきわけ。ひきわけの回は つなの目じるしを 白いせんまで もどしてから 決める */
+      if(s.wave==null){s.wave=rand(0,PI*2);s.lean=pick([-1,1])*rand(.25,.45);s.tie=Math.random()<.22;s.tieAt=rand(6.5,9.5);}
       var force=power(s.R)-power(s.L);
-      s.o+=(force*u*.9+(Math.sin(s.t*.8+s.wave)*.6+s.lean)*u*.55)*dt;
+      var settling=(s.tie&&s.tt>s.tieAt)||s.tt>16;
+      if(settling){
+        s.o+=(-s.o*3.2+force*u*.1)*dt;
+        if(once(s,"even"))P.note(s.c.x,s.c.y-u*1.15,"まんなか！",AD.INK);
+      }else{
+        /* なかなか決まらないときは だんだん かたむきを強くして 決着をつける */
+        var push=s.tt>9?(s.tt-9)*.8:0;
+        s.o+=(force*u*.9+(Math.sin(s.t*.8+s.wave)*.6+s.lean*(1+push))*u*.55)*dt;
+      }
       track(2.4);
       s.m.forEach(function(a){a.shake=Math.sin(P.now*18+a.seed)*a.u*.03;});
       s.chantT-=dt;
@@ -296,9 +316,11 @@ ACT.tug={
         s.chantT=.75;s.chantSide^=1;var team=s.chantSide?s.R:s.L,tx=team.reduce(function(v,a){return v+a.x;},0)/team.length;
         P.note(tx,P.headY(team[0])-6,"よいしょ",AD.INK);
       }
-      if(Math.abs(s.o)>u*1.9||s.tt>14){
+      var tieNow=settling&&(Math.abs(s.o)<u*.05||s.tt>18);
+      if((!settling&&Math.abs(s.o)>u*1.9)||tieNow){
+        if(tieNow)s.o=0;
         s.m.forEach(function(a){a.shake=0;a.hold=true;});
-        if(Math.abs(s.o)>u*1.9){
+        if(!tieNow){
           s.win=s.o>0?s.R:s.L;s.lose=s.o>0?s.L:s.R;var dirW=s.o>0?1:-1;
           s.win.forEach(function(a){P.jump(a,4.2);});P.say(s.win[0],"やったー！",1.3);
           s.lose.forEach(function(a){a.knock=dirW*a.u*4;});P.later(.4,function(){if(alive(s,s.lose[0]))P.say(s.lose[0],"わ〜っ！",1.1);});
@@ -325,7 +347,7 @@ ACT.tug={
 };
 
 /* みんなであそぶ あそびの一覧（4ひき以上いるときに えらばれる） */
-X.GROUP={daruma:{max:6,weight:1.2},race:{max:6,weight:1.2},tug:{max:6,weight:1,even:true}};
+X.GROUP={daruma:{max:6,weight:1.2,lanes:true},race:{max:6,weight:1.2,lanes:true},tug:{max:6,weight:1,even:true}};
 X.AFTER.daruma=["そーっと うごくの、むずかしい","ころんだ！って ドキッとした","つぎは おにを やりたいな"];
 X.AFTER.race=["いっぱい はしった〜","つぎは もっと はやく はしるぞ","あしが まだ はしってる"];
 X.AFTER.tug=["うでが つかれた〜","よいしょ、よいしょ、したね","つぎは ぜったい かつぞ"];

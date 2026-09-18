@@ -373,7 +373,13 @@ function frame(dt){
   drawStrokes(ctx);
   if(D.on)D.mark("strokes");
   var list=[];
-  P.animals.forEach(function(a){list.push({y:a.y,a:a});});
+  P.animals.forEach(function(a){
+    /* あそんでいる子が しげみの中に入ってしまったときは、しげみより手前に描く（体がかくれない）。
+       かくれんぼで かくれている子は そのまま しげみのうしろ */
+    var y=a.y;
+    if(a.sess&&!a.hidden&&a.sess.type!=="hide"){var b=P.bushHidden(a);if(b)y=b.y+.5;}
+    list.push({y:y,a:a});
+  });
   S.bushes.forEach(function(b){list.push({y:b.y,b:b});});
   P.balls.forEach(function(b){list.push({y:b.y+.5,ball:b});});
   P.props.forEach(function(pr){list.push({y:typeof pr.y==="function"?pr.y():pr.y,prop:pr});});
