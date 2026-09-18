@@ -346,7 +346,7 @@ var ACT={
         var sx=clamp(bx,L.u,S.W-L.u)-bx,sy=clamp(by,S.top,S.bottom)-by;
         go(L,L.x+sx,L.y+sy,1.2);L.hold=false;s.leadMove=true;
       }
-      s.m.slice(1).forEach(function(f,i){var k=L.u*1.6*(i+1);go(f,L.tx-dx/dl*k,L.ty-dy/dl*k*.6,1.6);});
+      s.m.slice(1).forEach(function(f,i){var k=L.u*1.6*(i+1),q=P.unhidePoint(L.tx-dx/dl*k,L.ty-dy/dl*k*.6,f.u);go(f,q.x,q.y,1.6);});
       P.say(L,"ならんで〜！",1.2);},
     update:function(s,dt){var L=s.m[0];
       if(s.st===1)return goodbye(s,s.m[s.m.length-1],L,s.tt,1.4);
@@ -375,7 +375,8 @@ var ACT={
         f.catchT=Math.max(0,(f.catchT||0)-dt);
         var want=i*L.u*1.6,acc=0,pt=s.trail[0];
         for(var j=s.trail.length-1;j>0;j--){acc+=Math.hypot(s.trail[j].x-s.trail[j-1].x,s.trail[j].y-s.trail[j-1].y);if(acc>=want){pt=s.trail[j-1];break;}}
-        go(f,pt.x,pt.y,f.catchT>0?1.8:1.05);
+        var tp=P.unhidePoint(pt.x,pt.y,f.u);
+        go(f,tp.x,tp.y,f.catchT>0?1.8:1.05);
       }
       s.talkT-=dt;if(s.talkT<0){s.talkT=rand(2,3);P.say(pick(s.m.slice(1)),pick(["いちに、いちに","まって〜","たのしいね"]),1.2);}
     },

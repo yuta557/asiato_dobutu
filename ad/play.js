@@ -32,15 +32,17 @@ P.trim=function(keep){
 /* ほかのどうぶつから一番はなれた場所をえらぶ */
 P.roomySpot=function(a){
   /* こみあっていると点数がぜんぶマイナスになるので、はじめは とても小さい値にしておく（null をかえさない） */
-  var best=null,bd=-1e9;
-  for(var i=0;i<6;i++){
+  var best=null,bd=-1e9,any=null,ad2=-1e9;
+  for(var i=0;i<10;i++){
     var p=S.safeSpot(a.u)||S.randomSpot(a.u),m=1e9;
-    if(P.inArea(p.x,p.y,a.u,a.sess))continue;
     P.animals.forEach(function(b){if(b!==a)m=Math.min(m,Math.hypot(b.x-p.x,(b.y-p.y)*1.6));});
     m-=Math.hypot(p.x-a.x,p.y-a.y)*.25;
+    if(m>ad2){ad2=m;any=p;}
+    if(P.inArea(p.x,p.y,a.u,a.sess))continue;   /* あそび場の中は えらばない */
     if(m>bd){bd=m;best=p;}
   }
-  return best;
+  /* ぜんぶ あそび場の中だったときは、いちばんよかった場所をつかう（null をかえさない） */
+  return best||any||S.randomSpot(a.u);
 };
 var TOP={foot1:2.6,hand0:2.6,hand3:2.2,hand5:2.2,foot5:2.2};
 
@@ -134,6 +136,40 @@ function avoid(a,ux,uy){
   var nx=ux+sx,ny=uy+sy,n=Math.hypot(nx,ny)||1;
   return {x:nx/n,y:ny/n};
 }
+/* ---- しげみに かくれてしまわないように ----
+   しげみは どうぶつより手前に描かれるので、しげみの絵の中に入ると 体が見えなくなる。
+   かくれんぼ以外では、見えなくなる場所から すこしずつ ずれていく */
+P.bushHidden=function(a){
+  if(a.hidden||(a.sess&&a.sess.type==="hide"))return null;
+  for(var i=0;i<S.bushes.length;i++){
+    var b=S.bushes[i],hw=b.img.w*.5-a.u*.2;
+    if(Math.abs(a.x-b.x)>hw)continue;
+    if(a.y>b.y-2||a.y<b.y-b.img.h)continue;
+    return b;
+  }
+  return null;
+};
+/* その場所が しげみにかくれるなら、しげみの手前（すぐ下）へずらした場所をかえす */
+P.unhidePoint=function(x,y,u){
+  for(var i=0;i<S.bushes.length;i++){
+    var b=S.bushes[i];
+    if(Math.abs(x-b.x)>b.img.w*.5+u*.2)continue;
+    if(y>b.y+2||y<b.y-b.img.h)continue;
+    return {x:x,y:clamp(b.y+u*.35,S.top,S.bottom)};
+  }
+  return {x:x,y:y};
+};
+function bushStepOut(a,dt){
+  var b=P.bushHidden(a);if(!b)return;
+  var hw=b.img.w*.5+a.u*.25,dx=a.x-b.x;
+  var left=-hw-dx,right=hw-dx,down=(b.y+4)-a.y;
+  var mv=Math.abs(left)<Math.abs(right)?left:right;
+  var useDown=Math.abs(down)<Math.abs(mv)*1.2;
+  var sp=a.u*2.2*dt;
+  if(useDown)a.y+=Math.min(down,sp);
+  else a.x+=mv>0?Math.min(mv,sp):Math.max(mv,-sp);
+  a.y=clamp(a.y,S.top,S.bottom);a.x=clamp(a.x,a.u*.8,S.W-a.u*.8);
+}
 function stepAnimal(a,dt){
   a.age+=dt;a.cool-=dt;a.talk=Math.max(0,a.talk-dt);
   /* ぶつかったままの子は、少しはなれた場所へ移る */
@@ -179,7 +215,7 @@ function stepAnimal(a,dt){
   if(!wants&&a.face&&a.face!==a.dir&&P.now-(a.dirT||-9)>.35){a.dir=a.face;a.dirT=P.now;}
   if(a.knock){a.x+=a.knock*dt;a.knock*=Math.pow(.02,dt);if(Math.abs(a.knock)<2)a.knock=0;}
   if(a.z>0||a.vz>0){a.vz-=a.u*15*dt;a.z+=a.vz*dt;if(a.z<=0){a.z=0;a.vz=0;a.land=1;}}
-  if(!a.leaving){a.x=clamp(a.x,a.u*.8,S.W-a.u*.8);a.y=clamp(a.y,S.top,S.bottom);}
+  if(!a.leaving){a.x=clamp(a.x,a.u*.8,S.W-a.u*.8);a.y=clamp(a.y,S.top,S.bottom);bushStepOut(a,dt);}
   else a.alpha=clamp(Math.min(a.x+a.u*2,S.W+a.u*2-a.x)/(a.u*2),0,1);
 }
 

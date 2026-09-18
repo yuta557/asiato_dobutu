@@ -12,8 +12,21 @@ function afx(a,cool){if(P.now-(a.gfxT==null?-99:a.gfxT)>cool){a.gfxT=P.now;retur
 function addProp(s,pr){s.props=s.props||[];s.props.push(pr);P.props.push(pr);}
 /* 横いっぱいに走る・ならぶための高さを n こ えらぶ（池と案内の文字をさける） */
 function lanes(n,x0,x1,u){
-  var top=S.top+u*.3,bot=S.bottom-u*.2,c=[];
-  for(var i=0;i<=28;i++){var y=top+(bot-top)*i/28;if(S.laneOK(y,x0,x1,u))c.push(y);}
+  var top=S.top+u*.3,bot=S.bottom-u*.2,c=[],cNoBush=[];
+  for(var i=0;i<=28;i++){
+    var y=top+(bot-top)*i/28;if(!S.laneOK(y,x0,x1,u))continue;
+    c.push(y);
+    /* しげみにかくれない高さを ゆうせんする（しげみの手前を通る＝しげみより下、または しげみの絵より上） */
+    var ok=true,lo=Math.min(x0,x1),hi=Math.max(x0,x1);
+    for(var k=0;k<S.bushes.length&&ok;k++){
+      var b=S.bushes[k],bl=b.x-b.img.w*.5-u*.3,br=b.x+b.img.w*.5+u*.3;
+      if(br<lo||bl>hi)continue;
+      if(y>b.y+2||y<b.y-b.img.h-u*.2)continue;
+      ok=false;
+    }
+    if(ok)cNoBush.push(y);
+  }
+  if(cNoBush.length>=n)c=cNoBush;
   if(c.length<n){var e=[];for(var j=0;j<n;j++)e.push(top+(bot-top)*(n===1?.5:j/(n-1)));return e;}
   for(var gap=u*1.25;gap>u*.4;gap*=.85){
     var picked=[c[0]];
