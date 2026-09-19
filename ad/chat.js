@@ -50,10 +50,18 @@ function ready(a){
 function stillOK(a){return a&&P.animals.indexOf(a)>=0&&!a.leaving&&!a.sess&&!a.watch&&!(P.area&&P.inArea(a.x,a.y,a.u,null));}
 
 function begin(a,b,sc){
-  var s={m:[a,b],l:sc.l,gap:1.35,t:0,i:0,together:sc.together,play:sc.play};
+  var s={m:[a,b],l:sc.l,gap:1.35,t:0,i:0,together:sc.together,play:sc.play,ready:false};
   C.s=s;
-  [a,b].forEach(function(x){x.chat=s;x.chatSeek=null;x.hold=true;x.rest=1;x.mult=1;});
-  faceTo(a,b);faceTo(b,a);
+  [a,b].forEach(function(x){x.chat=s;x.chatSeek=null;x.mult=1;x.rest=0;x.hold=false;});
+  /* かさなったまま 話さないよう、まず きちんと はなれて 向かいあう */
+  var mid={x:(a.x+b.x)/2,y:(a.y+b.y)/2},gap=(a.u+b.u)*.95;
+  var L=a.x<=b.x?a:b,R=L===a?b:a;
+  var lx=AD.clamp(mid.x-gap/2,L.u*1.2,S.W-L.u*1.2),rx=AD.clamp(mid.x+gap/2,R.u*1.2,S.W-R.u*1.2);
+  var ly=AD.clamp(mid.y-2,S.top+L.u*.4,S.bottom-L.u*.2),ry=AD.clamp(mid.y+2,S.top+R.u*.4,S.bottom-R.u*.2);
+  if(!S.clear(lx,ly,L.u)){lx=L.x;ly=L.y;}
+  if(!S.clear(rx,ry,R.u)){rx=R.x;ry=R.y;}
+  go(L,lx,ly,1.35);go(R,rx,ry,1.35);
+  faceTo(L,R);faceTo(R,L);
   return s;
 }
 /* おしゃべりの とちゅうは、あそびを はじめない（話の じゃまを しない） */
@@ -79,6 +87,18 @@ function finish(s){
 function step(s,dt){
   var a=s.m[0],b=s.m[1];
   if(!stillOK(a)||!stillOK(b)){C.stop();return;}
+  /* はなれて 向かいあうまでは 話しださない */
+  if(!s.ready){
+    s.t+=dt;
+    var far=Math.hypot(a.x-b.x,(a.y-b.y)*1.4),want=(a.u+b.u)*.8;
+    var placed=(Math.hypot(a.tx-a.x,a.ty-a.y)<a.u*.35&&Math.hypot(b.tx-b.x,b.ty-b.y)<b.u*.35);
+    if((placed&&far>want)||s.t>2){
+      s.ready=true;s.t=0;
+      a.hold=true;b.hold=true;a.rest=1;b.rest=1;
+      faceTo(a,b);faceTo(b,a);
+    }
+    return;
+  }
   s.t+=dt;
   while(s.i<s.l.length&&s.t>=s.i*s.gap){
     var ln=s.l[s.i],who=ln[0]?b:a,to=ln[0]?a:b;
