@@ -11,7 +11,7 @@ function allThere(s,list,limit){return (list||s.m).every(arrived)||s.tt>(limit||
 function afx(a,cool){if(P.now-(a.gfxT==null?-99:a.gfxT)>cool){a.gfxT=P.now;return true;}return false;}
 function addProp(s,pr){s.props=s.props||[];s.props.push(pr);P.props.push(pr);}
 /* 横いっぱいに走る・ならぶための高さを n こ えらぶ（池と案内の文字をさける） */
-function lanes(n,x0,x1,u){
+function lanes(n,x0,x1,u,minK){
   /* いちばん手前は 見ている子が ならぶ場所として あけておく */
   /* いちばん手前は 見ている子の ブルーシート用に あけておく */
   var top=S.top+u*.3,bot=S.bottom-u*2.1,c=[],cNoBush=[];
@@ -30,7 +30,7 @@ function lanes(n,x0,x1,u){
   }
   /* ならぶ間かくは どうぶつの大きさぶん（u*1.05）はあける。
      せますぎて ならべないときは、しげみをよける条件をはずす（あそび中は しげみの手前に描かれるので かくれない） */
-  var MIN=u*1.25;
+  var MIN=u*(minK||1.25);
   function greedy(list){
     if(list.length<n)return null;
     for(var gap=u*1.5;gap>=MIN;gap*=.9){
@@ -52,24 +52,25 @@ function lanes(n,x0,x1,u){
   return pick2.slice(0,n);
 }
 /* ならべる ぶんだけ 参加する。ならべない子は 見るがわへ */
-function fitLanes(s,list,x0,x1,u){
-  var ys=lanes(list.length,x0,x1,u);
+function fitLanes(s,list,x0,x1,u,minK){
+  var ys=lanes(list.length,x0,x1,u,minK);
   while(ys.length<list.length&&list.length>2){
     var outA=list.pop(),i=s.m.indexOf(outA);
     if(i>=0)s.m.splice(i,1);
     outA.sess=null;outA.hold=false;outA.face=0;outA.faceLock=false;outA.mult=1;outA.lane=null;
     outA.rest=rand(.2,1);outA.cool=rand(3,6);
   }
-  while(ys.length<list.length)ys.push(ys.length?ys[ys.length-1]+u*1.25:(S.top+S.bottom)/2);
+  while(ys.length<list.length)ys.push(ys.length?ys[ys.length-1]+u*(minK||1.25):(S.top+S.bottom)/2);
   return ys;
 }
 /* 何レーンまで ゆったり ならべるか（これより多い人数では あそびを始めない） */
-X.laneRoom=function(u){return Math.max(2,Math.floor((S.bottom-S.top-u*2.6)/(u*1.25))+1);};
+X.laneRoom=function(u,minK){return Math.max(2,Math.floor((S.bottom-S.top-u*2.6)/(u*(minK||1.25)))+1);};
 /* ならぶのに 間に合わなかった子。線のすぐ近くなら きっちりそろえ、
    とおくて まにあわない子は あそびから ぬけて 見ているがわにまわる（線より前から スタートしないように） */
 function lineUp(s,x,keep){
   s.m.slice().forEach(function(a){
-    if(Math.abs(a.x-x)<a.u*3.5||a===keep||s.m.length<=2){a.x=x;if(a.lane!=null)a.y=a.lane;return;}
+    var gx=(a.startX!=null?a.startX:x);
+    if(Math.abs(a.x-gx)<a.u*3.5||a===keep||s.m.length<=2){a.x=gx;if(a.lane!=null)a.y=a.lane;return;}
     var i=s.m.indexOf(a);s.m.splice(i,1);
     if(s.players){var j=s.players.indexOf(a);if(j>=0)s.players.splice(j,1);}
     a.sess=null;a.hold=false;a.face=0;a.faceLock=false;a.mult=1;a.lane=null;a.rest=rand(.3,1);a.cool=rand(4,8);
@@ -95,11 +96,21 @@ ACT.daruma={
     /* いまの 上下の ならび順のまま レーンを わりあてる（すれちがわない）。
        ならべない子は 見るがわへ */
     s.players.sort(function(p,q){return p.y-q.y;});
-    var ys=fitLanes(s,s.players,s.ox,sx,u);
+    /* だるまさんがころんだ は ならぶ間かくを つめ、入りきらないぶんは
+       2れつ目（すこし うしろ）に ならんで、たくさん あそべるようにする */
+    var rowN=Math.max(1,Math.min(s.players.length,X.laneRoom(u,1.02)));
+    var ys=lanes(rowN,s.ox,sx,u,1.02);
+    if(!ys.length)ys=[(S.top+S.bottom)/2];
     s.oy=ys.reduce(function(v,y){return v+y;},0)/ys.length;
     go(oni,s.ox,s.oy,1.2);
     s.sx=sx;
-    s.players.forEach(function(p,i){p.lane=ys[i];go(p,sx,ys[i],1.5);});
+    var away=s.side<0?1:-1;
+    s.players.forEach(function(p,i){
+      var row=i%ys.length,rank=Math.floor(i/ys.length);
+      p.lane=ys[row];p.rank=rank;
+      p.startX=clamp(sx+away*rank*u*1.7,u*1.2,S.W-u*1.2);
+      go(p,p.startX,p.lane,1.5);
+    });
     P.say(oni,"わたしが おにね！",1.3);
   },
   update:function(s,dt){
@@ -564,7 +575,7 @@ function catchIt(s,c,t){
   P.later(.5,function(){if(alive(s,t))P.say(t,pick(["つかまった〜、おにに なっちゃった","いっしょに おにだ〜"]),1.5);});
 }
 /* みんなであそぶ あそびの一覧（4ひき以上いるときに えらばれる） */
-X.GROUP={daruma:{max:7,weight:1.2,lanes:true},race:{max:7,weight:1.2,lanes:true},tug:{max:8,weight:1,even:true},oni:{max:8,weight:1.4}};
+X.GROUP={daruma:{max:9,weight:1.2,lanes:true,minK:1.02,ranks:2},race:{max:7,weight:1.2,lanes:true},tug:{max:8,weight:1,even:true},oni:{max:8,weight:1.4}};
 X.AFTER.daruma=["そーっと うごくの、むずかしい","ころんだ！って ドキッとした","つぎは おにを やりたいな"];
 X.AFTER.race=["いっぱい はしった〜","つぎは もっと はやく はしるぞ","あしが まだ はしってる"];
 X.AFTER.tug=["うでが つかれた〜","よいしょ、よいしょ、したね","つぎは ぜったい かつぞ"];

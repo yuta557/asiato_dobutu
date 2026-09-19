@@ -915,7 +915,7 @@ X.end=function(s){
   if(X.GROUP&&X.GROUP[s.type])bigCool=rand(12,16);
   s.m.forEach(function(a){if(a.sess!==s)return;a.afterPlay={type:s.type,t:P.now};a.sess=null;a.mult=1;a.face=0;a.hold=false;a.sleep=false;a.hidden=false;a.nod=0;a.shake=0;a.lag=0;a.catchT=0;
     a.faceLock=false;a.caught=false;a.wet=0;a.done=false;a.trip=0;a.boost=0;a.weak=0;a.wob=0;a.dash=0;
-    a.even=null;a.burst=0;a.aim=null;
+    a.even=null;a.burst=0;a.aim=null;a.rank=0;a.startX=null;
     a.rest=rand(1.5,3);a.cool=rand(5,9);a.tx=a.x;a.ty=a.y;});
   if(s.ball){var k=P.balls.indexOf(s.ball);if(k>=0)P.balls.splice(k,1);}
   if(s.fetch&&s.fetch.by&&s.fetch.a){s.fetch.a.helping=null;s.fetch.a.hold=false;s.fetch.a.face=0;s.fetch.a.rest=1;}
@@ -973,21 +973,28 @@ X.wake=function(){return false;};
    あそびの場所にかぶっていたら少しはなれて、あそびの方を向いて、ときどき おうえんする */
 var CHEER={daruma:["そーっと、そーっと…","うごいちゃ だめだよ〜"],race:["がんばれ〜！","いけいけ〜！"],
 tug:["がんばれ〜！","よいしょ〜！"],oni:["にげて〜！","うしろ、うしろ〜！"]};
+/* シートで 見ている子の ひとりごと */
+var WATCH=["かんせん！！","きゅうけい〜","たのしそう〜","いいぞ〜","ここで みてるね","ざぶとん、ふかふか","よく みえる〜"];
 /* ---- 見まもる子の ブルーシート（絵をそのまま つかう） ---- */
 var MAT=new Image();MAT.src="img/sheet.png";
 var CUSH=[0,1,2].map(function(i){var im=new Image();im.src="img/cushion"+i+".png";return im;});
 function drawMat(g,s){
   var G=s.gal;if(!G||!s.galN)return;
-  var u=s.matU||P.U,w=(G.n-1)*G.gap+u*3.2,h=w*(159/426);
-  var cx=G.x0+G.gap*(G.n-1)/2,by=G.y+u*.5;      /* シートの 下のはし */
+  var u=s.matU||P.U,rows=(s.seats&&s.seats.length>G.n)?2:1;
+  var w=(G.n-1)*G.gap+u*(rows>1?3.8:3.2);
+  /* たてよこの ひりつは のばしてよい（ならぶ列が 2つのときは たてに のばす） */
+  var h=Math.max(w*(159/426),u*(rows>1?2.7:1.8));
+  var cx=G.x0+G.gap*(G.n-1)/2+(rows>1?G.gap*.25:0),by=G.y+u*.55;
   if(MAT.complete&&MAT.naturalWidth)g.drawImage(MAT,cx-w/2,by-h,w,h);
-  /* ざぶとん（ひとり1まいでは なく、シートに 2〜3まい） */
-  var nc=Math.max(2,Math.min(3,Math.round(G.n/2)));
+  /* ざぶとん（ひとり1まいでは なく、シートに 2〜4まい） */
+  var nc=Math.max(2,Math.min(4,Math.round(G.n*rows/2)));
   for(var i=0;i<nc;i++){
     var im=CUSH[i%CUSH.length];if(!im.complete||!im.naturalWidth)continue;
     var cw=u*1.35,ch=cw*(im.naturalHeight/im.naturalWidth);
-    var fx=cx+(nc===1?0:(i/(nc-1)-.5)*(w*.56));
-    g.drawImage(im,fx-cw/2,G.y+u*.12-ch*.55,cw,ch);
+    var rowI=rows>1&&i%2?1:0;
+    var fx=cx+(nc===1?0:(i/(nc-1)-.5)*(w*.56))+(rowI?u*.4:0);
+    var fy=G.y+u*.12-rowI*u*1.15;
+    g.drawImage(im,fx-cw/2,fy-ch*.55,cw,ch);
   }
 }
 /* 見まもる子の ならぶ場所。あそびが はじまったときに 一度だけ きめて、あとは 動かさない */
@@ -1065,7 +1072,13 @@ function spectate(dt){
     if(G){
       var gi=clamp(a.galI==null?0:a.galI,0,G.n*2-1),col=gi%G.n,row=Math.floor(gi/G.n);
       var sx=G.x0+G.gap*col+(row?G.gap*.5:0),sy=G.y-row*a.u*1.15;
-      if(Math.hypot(a.x-sx,(a.y-sy)*1.3)>a.u*.45){a.watchMove=true;a.galSet=false;a.hold=false;go(a,sx,sy,1.75);return;}
+      if(Math.hypot(a.x-sx,(a.y-sy)*1.3)>a.u*.45){
+        /* シートへ むかう とちゅうに ひとこと */
+        if(!a.watchMove&&P.now-(a.watchSaid==null?-99:a.watchSaid)>12&&Math.random()<.6){
+          a.watchSaid=P.now;P.say(a,pick(WATCH),1.4);
+        }
+        a.watchMove=true;a.galSet=false;a.hold=false;go(a,sx,sy,1.75);return;
+      }
       /* すわったら うごかない（あしも 向きも そのまま）。することは おうえんの ことばだけ */
       if(!a.galSet){a.galSet=true;a.face=cx>a.x?1:-1;a.dir=a.face;}
       a.hold=true;a.moving=false;a.tx=a.x;a.ty=a.y;a.rest=1;a.mult=1;a.z=0;a.vz=0;
@@ -1078,8 +1091,10 @@ function spectate(dt){
   s.cheerT=(s.cheerT==null?rand(4,6):s.cheerT)-dt;
   if(s.cheerT<=0){
     s.cheerT=rand(5,8);
-    var cheer=fans.filter(function(a){return !a.watchMove;});
-    if(cheer.length&&CHEER[s.type])P.say(pick(cheer),pick(CHEER[s.type]),1.3);
+    /* すわっている子は おうえん、むかっている子は 「かんせん！！」など */
+    var seated=fans.filter(function(a){return !a.watchMove;}),walking=fans.filter(function(a){return a.watchMove;});
+    if(walking.length&&Math.random()<.5)P.say(pick(walking),pick(WATCH),1.4);
+    else if(seated.length&&CHEER[s.type])P.say(pick(seated),pick(CHEER[s.type]),1.3);
   }
 }
 /* 見まもっている子がタップされた */
@@ -1115,7 +1130,7 @@ X.schedule=function(dt){
       /* 一列にならぶ あそびは、ならべる本数まで（大きい子がいるほど 少なくなる） */
       if(g.lanes&&X.laneRoom){
         var bigU=avail.slice(0,n).reduce(function(v,a){return Math.max(v,a.u);},P.U);
-        n=Math.min(n,X.laneRoom(bigU));
+        n=Math.min(n,X.laneRoom(bigU,g.minK)*(g.ranks||1)+(g.ranks>1?1:0));
       }
       if(g.even)n-=n%2;
       /* ひと休みが終わっている子から先に入れる */
