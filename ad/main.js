@@ -245,8 +245,15 @@ cv.addEventListener("pointerdown",function(e){
   touched();if(uw.st)finish(uw);
   down=true;downPos=pos(e);downMoved=false;downT=clock();downUsed=false;
   downMax=0;longOff=false;downSlop=e.pointerType==="mouse"?LONG_SLOP_MOUSE:LONG_SLOP_TOUCH;
-  downOnBall=!pending&&!!P.hitBall(downPos);
-  downOnAnimal=!pending&&!downOnBall&&!!P.hit(downPos);
+  /* ボールと どうぶつが かさなっているときは、近いほうを えらぶ
+     （ボールを だいている子が 押せなくならないように） */
+  var hb=pending?null:P.hitBall(downPos),ha=pending?null:P.hit(downPos);
+  if(hb&&ha){
+    var da=Math.hypot(downPos.x-ha.x,downPos.y-(ha.y-ha.z-ha.u*(ha.sp.hitY||.95)))/(ha.u*1.05);
+    var db=Math.hypot(downPos.x-hb.x,downPos.y-(hb.y-hb.r-hb.z))/Math.max(hb.r*2.4,22);
+    if(da<=db)hb=null;else ha=null;
+  }
+  downOnBall=!!hb;downOnAnimal=!!ha;
   try{cv.setPointerCapture(e.pointerId);}catch(err){}
   e.preventDefault();
 });
@@ -320,6 +327,17 @@ document.getElementById("reset").addEventListener("click",function(){
   });
   P.later(wait+3.4,wipeNow);
 });
+
+/* ---- 作品について ---- */
+var aboutEl=document.getElementById("about"),aboutBtn=document.getElementById("aboutBtn"),aboutClose=document.getElementById("aboutClose");
+function showAbout(on){
+  aboutEl.hidden=!on;aboutBtn.setAttribute("aria-expanded",on?"true":"false");
+  try{(on?aboutClose:aboutBtn).focus({preventScroll:true});}catch(err){}
+}
+aboutBtn.addEventListener("click",function(){showAbout(aboutEl.hidden);});
+aboutClose.addEventListener("click",function(){showAbout(false);});
+aboutEl.addEventListener("click",function(e){if(e.target===aboutEl)showAbout(false);});
+document.addEventListener("keydown",function(e){if(e.key==="Escape"&&!aboutEl.hidden)showAbout(false);});
 
 /* ---- 図鑑（うまれかたの一覧を兼ねる） ---- */
 var cellsEl=document.getElementById("cells"),cellMap={};
