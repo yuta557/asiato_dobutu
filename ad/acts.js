@@ -315,7 +315,13 @@ var ACT={
       /* おには にげる子より すこし はやい。おわりに近づくと にげる子は つかれてくる */
       var tired=s.t>s.dur*.6?.92:1;
       s.rs.forEach(function(a){a.mult=1;});
-      if(!c.hold){c.face=0;go(c,r.x,r.y,grace?1.15:1.62);}
+      if(!c.hold){
+        c.face=0;
+        /* にげる先を すこし よんで 先まわりする */
+        var rhx=(r.tx==null?0:r.tx-r.x),rhy=(r.ty==null?0:r.ty-r.y),rhl=Math.hypot(rhx,rhy);
+        var lead2=(rhl>1&&d>(c.u+r.u)*1.6)?r.u*.9:0;
+        go(c,r.x+(rhl>1?rhx/rhl:0)*lead2,r.y+(rhl>1?rhy/rhl:0)*lead2*.6,grace?1.15:1.62);
+      }
       else if(Math.abs(dx)>c.u*.5)c.face=dx>0?1:-1;
       /* タッチできないとき（はなれる時間中・数えている間・つかまった直後）は、重ならないようにする */
       var canCatch=!c.hold&&s.tt>s.minT&&!s.endSoon,minGap=(c.u+r.u)*.6;
@@ -348,13 +354,13 @@ var ACT={
       s.talkT-=dt;
       if(s.talkT<0&&!counting){s.talkT=rand(1.8,2.8);if(Math.random()<.5)P.say(pick(s.rs),pick(["にげろ〜","こっちだよ〜","きゃ〜！"]),1.2);else P.say(c,pick(["まてまて〜","まて〜！","つかまえるぞ〜"]),1.2);}
       /* 体が かさなるほど 近づいたら、まだ はやくても タッチしたことにする */
-      var reach=Math.hypot(dx,dy*1.5),deep=reach<(c.u+r.u)*.42;
+      var reach=Math.hypot(dx,dy*1.5),deep=reach<(c.u+r.u)*.6;
       /* ずっと おなじ きょりで にらみあいに なったら、おにが ぐっと 出る */
       if(canCatch&&reach<(c.u+r.u)*1.3){
         s.closeT=(s.closeT||0)+dt;
         if(s.closeT>3.5&&!(c.burst>0)){c.burst=rand(1.6,2.4);s.closeT=0;P.say(c,pick(["いまだ〜！","つかまえた〜！"]),1.2);P.note(c.x,P.headY(c)-6,"ビューン","#E9A93B");}
       }else s.closeT=0;
-      if((canCatch||(deep&&!counting&&!s.endSoon&&s.tt>.6))&&reach<(c.u+r.u)*.55){
+      if((canCatch||(deep&&!counting&&!s.endSoon&&s.tt>.6))&&reach<(c.u+r.u)*.78){
         P.say(c,"タッチ！",1.1);P.jump(c,3.5);
         var caught=r,tagger=c;
         P.later(.5,function(){if(alive(s,caught))P.say(caught,"つかまった〜",1.2);});

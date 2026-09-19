@@ -465,11 +465,17 @@ ACT.oni={
             var ox=c.x-o.x,oy=(c.y-o.y)*1.4,od=Math.hypot(ox,oy)||1,R=(c.u+o.u)*1.5;
             if(od<R){px+=ox/od*(R-od)*.9;py+=oy/od*(R-od)*.45;}
           });
-          /* おなじ子を おいかける ときは、ちがう むきから まわりこむ */
+          /* おなじ子を おいかける ときは、ひとりは まっすぐ、ほかは 先まわり（うらを かく） */
           var same=s.onis.filter(function(o){return o.aim===t;}),k=same.indexOf(c),gx=t.x,gy=t.y;
-          if(same.length>1){
-            var an=Math.atan2(c.y-t.y,c.x-t.x)+(k-(same.length-1)/2)*.85;
-            gx=t.x+Math.cos(an)*t.u*1.1;gy=t.y+Math.sin(an)*t.u*.6;
+          var hx2=(t.tx==null?0:t.tx-t.x),hy2=(t.ty==null?0:t.ty-t.y),hl2=Math.hypot(hx2,hy2);
+          if(hl2>1){hx2/=hl2;hy2/=hl2;}else{hx2=0;hy2=0;}
+          if(k>0){
+            /* にげる先に まわりこむ */
+            var lead=t.u*(1.6+k*1.2);
+            gx=clamp(t.x+hx2*lead,c.u,S.W-c.u);gy=clamp(t.y+hy2*lead*.6,S.top,S.bottom);
+          }else if(hl2>1&&AD.dist(c,t)>(c.u+t.u)*1.6){
+            /* ひとりのときも すこしだけ 先を よむ */
+            gx=clamp(t.x+hx2*t.u*.9,c.u,S.W-c.u);gy=clamp(t.y+hy2*t.u*.5,S.top,S.bottom);
           }
           /* すぐ となりに ほかの おにが いるときは、まず はなれる */
           var nearO=null,nd=1e9;
@@ -482,8 +488,9 @@ ACT.oni={
         /* おいかけている子だけでなく、すぐそばに 来た子は だれでも タッチ
            （体が かさなるほど 近づいたら、まだ はやくても タッチしたことにする） */
         s.rs.slice().forEach(function(r){
+          /* 体が ふれるくらい 近づいたら タッチ */
           var reach=Math.hypot(c.x-r.x,(c.y-r.y)*1.5);
-          if(reach<(c.u+r.u)*.5&&(s.tt>1.2||reach<(c.u+r.u)*.42))catchIt(s,c,r);
+          if(reach<(c.u+r.u)*.78&&(s.tt>1.2||reach<(c.u+r.u)*.6))catchIt(s,c,r);
         });
       });
       /* にげる子は いちばん近い おにから はなれる */
