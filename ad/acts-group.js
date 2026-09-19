@@ -234,13 +234,15 @@ function catchOne(s,p){
   var oni=s.m[0],u=maxU(s.m);
   if(p.caught)return;
   p.wob=.5;P.say(oni,p.sp.name+"、いま うごいた！",1.4);
-  /* 言われたら すぐに、はやあしで おにのところへ */
+  /* 言われたら、そのまま おにの よこへ（草原を よこぎって 歩くと 長いので ぱっと 行く） */
   P.later(.4,function(){
     if(!alive(s,p)||p.caught)return;
-    p.caught=true;s.caught.push(p);p.shake=0;p.hold=false;
+    p.caught=true;s.caught.push(p);p.shake=0;
     var k=s.caught.length;
-    go(p,s.ox-s.side*u*.2,clamp(s.oy+u*1.2*Math.ceil(k/2)*(k%2?1:-1),S.top,S.bottom),2.4);
-    P.say(p,"つかまった〜",1.2);
+    var qx=clamp(s.ox-s.side*u*.2,p.u,S.W-p.u),qy=clamp(s.oy+u*1.2*Math.ceil(k/2)*(k%2?1:-1),S.top,S.bottom);
+    p.x=qx;p.y=qy;p.tx=qx;p.ty=qy;p.z=0;p.vz=0;p.mult=1;p.moving=false;p.hold=true;
+    p.face=-s.side;p.dir=p.face;
+    P.say(p,"つかまった〜",1.2);P.jump(p,2.6);
   });
 }
 
@@ -295,8 +297,9 @@ ACT.race={
       /* とちゅうから 本気を出す子が いる */
       if(!s.spurted&&s.tt>s.spurtAt){
         s.spurted=true;
+        /* 本気を出すのは、いちばん おくれている子だけ */
         var run=s.m.filter(function(a){return !a.done;});
-        var who=pick(run);
+        var who=run.slice().sort(function(p2,q2){return (p2.x-s.x0)*dirX-(q2.x-s.x0)*dirX;})[0];
         if(who){who.dash=rand(.9,1.3);P.say(who,pick(["ここからが 本気！","ラストスパート！"]),1.4);P.note(who.x,P.headY(who)-6,"ビューン","#E9A93B");}
       }
       /* いちばん前の子との 差（ぬかれた子は すこし がんばるので、大きく はなれない） */
