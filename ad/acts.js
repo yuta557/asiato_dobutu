@@ -976,6 +976,11 @@ X.end=function(s){
 X.ACT=ACT;
 X.h={go:go,arrived:arrived,faceTo:faceTo,next:next,once:once,alive:alive,tapLine:tapLine,goodbye:goodbye,fx:fx,weighted:weighted};
 /* にげる先をさがす（ふえおに からも つかう） */
+/* いま、ブルーシートで みんなが 見まもる あそび（だるまさんがころんだ・よーいどん・つなひき）を
+   している／これから する ところか */
+X.watching=function(){
+  return P.sessions.some(function(s){return WATCHABLE[s.type];});
+};
 X.fleeFrom=function(r,c,others){return pickFlee({flee:r.fleeP},r,c,others);};
 /* その子が x のところまで 何秒で 行けるか（ならぶのに 間に合うかの 見つもり） */
 X.canReach=function(a,x,secs){
@@ -1030,7 +1035,10 @@ X.wake=function(){return false;};
 var CHEER={daruma:["そーっと、そーっと…","うごいちゃ だめだよ〜"],race:["がんばれ〜！","いけいけ〜！"],
 tug:["がんばれ〜！","よいしょ〜！"],oni:["にげて〜！","うしろ、うしろ〜！"]};
 /* シートで 見ている子の ひとりごと */
-var WATCH=["かんせん！！","きゅうけい〜","たのしそう〜","いいぞ〜","ここで みてるね","ざぶとん、ふかふか","よく みえる〜"];
+/* ブルーシートへ むかう とちゅうの ひとこと。
+   「なにを しに いくのか」が わかる ことばにする */
+var WATCH=["おうえん しに いくね！","きょうは かんせん〜","いい せきで みるぞ〜",
+  "ざぶとん しいて みよう","すわって おうえん するぞ〜","かんせん、かんせん〜"];
 /* ---- 見まもる子の ブルーシート（絵をそのまま つかう） ---- */
 var MAT=new Image();MAT.src="img/sheet.png";
 var CUSH=[0,1,2].map(function(i){var im=new Image();im.src="img/cushion"+i+".png";return im;});

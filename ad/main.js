@@ -207,6 +207,9 @@ function triPoint(u){
 function runDemo(dt){
   /* みんなが 帰っていく あいだは、新しい子を うまない */
   if(P.bye){if(demo.phase!=="idle")abortDemo();return;}
+  /* みんなで 見まもる あそび（だるまさんがころんだ・よーいどん・つなひき）の 間も、
+     あたらしい子を うまない（とちゅうから 入ってきて ばらばらに ならないように） */
+  if(X.watching&&X.watching()){if(demo.phase!=="idle")abortDemo();return;}
   if(P.reduced){staticGuide(dt||0);return;}
   var now=P.now,el=now-demo.t0;
   if(now-lastUser<=1.8||down){if(demo.phase!=="idle")abortDemo();return;}

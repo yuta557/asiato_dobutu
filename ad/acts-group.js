@@ -288,7 +288,8 @@ ACT.race={
         /* 体の大きさで はやさが 変わらないように そろえる（その回の「ちから」だけで きまる） */
         var bu=maxU(s.m);
         s.m.forEach(function(a){a.hold=false;a.even=rand(.97,1.05);a.spd=1.9*(bu/a.u);a.dash=0;});
-        s.spurtAt=rand(2.5,5);s.spurted=false;
+        /* 「本気！」は 毎回では ない（半分くらいの レース）。出るときは ビリの子だけ */
+        s.spurtAt=rand(2.5,5);s.spurted=Math.random()<.45;
         next(s);
       }
       return;
