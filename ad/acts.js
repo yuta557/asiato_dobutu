@@ -973,69 +973,37 @@ X.wake=function(){return false;};
    あそびの場所にかぶっていたら少しはなれて、あそびの方を向いて、ときどき おうえんする */
 var CHEER={daruma:["そーっと、そーっと…","うごいちゃ だめだよ〜"],race:["がんばれ〜！","いけいけ〜！"],
 tug:["がんばれ〜！","よいしょ〜！"],oni:["にげて〜！","うしろ、うしろ〜！"]};
-/* ---- 見まもる子の ブルーシート（見ている子がいるときだけ 出す） ----
-   大きさは 見ている子の数で かわる。うえに ざぶとんを ならべる */
+/* ---- 見まもる子の ブルーシート（絵をそのまま つかう） ---- */
+var MAT=new Image();MAT.src="img/sheet.png";
+var CUSH=[0,1,2].map(function(i){var im=new Image();im.src="img/cushion"+i+".png";return im;});
 function drawMat(g,s){
   var G=s.gal;if(!G||!s.galN)return;
-  var u=s.matU||P.U,x0=G.x0-u*1.15,x1=G.x0+G.gap*(G.n-1)+u*1.15,y=G.y+u*.34,dep=u*1.45,ins=u*.5;
-  g.save();
-  /* シート */
-  g.beginPath();
-  g.moveTo(x0,y);g.lineTo(x0+ins,y-dep);g.lineTo(x1-ins,y-dep);g.lineTo(x1,y);g.closePath();
-  g.fillStyle="#63B2E6";g.fill();
-  g.strokeStyle="#3E90CC";g.lineWidth=Math.max(1.4,u*.05);g.stroke();
-  /* しわ */
-  g.save();g.clip();
-  g.strokeStyle="rgba(255,255,255,.45)";g.lineWidth=Math.max(1,u*.03);
-  for(var i=1;i<=3;i++){
-    var t=i/4,yy=y-dep*t;
-    g.beginPath();g.moveTo(x0+ins*t,yy);g.lineTo(x1-ins*t,yy);g.stroke();
+  var u=s.matU||P.U,w=(G.n-1)*G.gap+u*3.2,h=w*(159/426);
+  var cx=G.x0+G.gap*(G.n-1)/2,by=G.y+u*.5;      /* シートの 下のはし */
+  if(MAT.complete&&MAT.naturalWidth)g.drawImage(MAT,cx-w/2,by-h,w,h);
+  /* ざぶとん（ひとり1まいでは なく、シートに 2〜3まい） */
+  var nc=Math.max(2,Math.min(3,Math.round(G.n/2)));
+  for(var i=0;i<nc;i++){
+    var im=CUSH[i%CUSH.length];if(!im.complete||!im.naturalWidth)continue;
+    var cw=u*1.35,ch=cw*(im.naturalHeight/im.naturalWidth);
+    var fx=cx+(nc===1?0:(i/(nc-1)-.5)*(w*.56));
+    g.drawImage(im,fx-cw/2,G.y+u*.12-ch*.55,cw,ch);
   }
-  g.strokeStyle="rgba(255,255,255,.3)";
-  for(var k=1;k<=2;k++){
-    var xx=x0+(x1-x0)*k/3;
-    g.beginPath();g.moveTo(xx,y);g.lineTo(xx+ins*.7,y-dep);g.stroke();
-  }
-  g.restore();
-  /* 杭 */
-  [[x0,y],[x0+ins,y-dep],[x1-ins,y-dep],[x1,y]].forEach(function(c){
-    var w=u*.13,h=u*.42;
-    g.fillStyle="#B08A63";
-    g.beginPath();g.moveTo(c[0]-w,c[1]-h);g.lineTo(c[0]+w,c[1]-h);g.lineTo(c[0]+w*.35,c[1]);g.lineTo(c[0]-w*.35,c[1]);g.closePath();g.fill();
-    g.fillStyle="#D6B48C";
-    g.beginPath();g.ellipse(c[0],c[1]-h,w,w*.5,0,0,PI*2);g.fill();
-  });
-  /* ざぶとん */
-  var cols=["#F3DE8A","#EDF2C9","#A9C98B"];
-  for(var j=0;j<G.n;j++){
-    var cx=G.x0+G.gap*j,cy=G.y+u*.06,w2=u*.62,h2=u*.26,col=cols[j%cols.length];
-    g.fillStyle=col;
-    rr2(g,cx-w2,cy-h2,w2*2,h2*2,h2*.55);g.fill();
-    g.strokeStyle="rgba(120,110,80,.28)";g.lineWidth=Math.max(1,u*.02);g.stroke();
-    g.strokeStyle="rgba(120,110,80,.18)";
-    g.beginPath();g.moveTo(cx-w2*.75,cy);g.lineTo(cx+w2*.75,cy);g.stroke();
-    g.beginPath();g.moveTo(cx,cy-h2*.7);g.lineTo(cx,cy+h2*.7);g.stroke();
-  }
-  g.restore();
 }
-function rr2(g,x,y,w,h,r){
-  g.beginPath();g.moveTo(x+r,y);g.lineTo(x+w-r,y);g.quadraticCurveTo(x+w,y,x+w,y+r);
-  g.lineTo(x+w,y+h-r);g.quadraticCurveTo(x+w,y+h,x+w-r,y+h);g.lineTo(x+r,y+h);
-  g.quadraticCurveTo(x,y+h,x,y+h-r);g.lineTo(x,y+r);g.quadraticCurveTo(x,y,x+r,y);g.closePath();
-}
-/* 見まもる子の ならぶ場所（あそび場の下→上の順に、みんなが ならべる 高さをさがす） */
-function gallery(fans){
+/* 見まもる子の ならぶ場所。あそびが はじまったときに 一度だけ きめて、あとは 動かさない */
+function gallery(n,u){
   var A=P.area;if(!A)return null;
-  var u=0;fans.forEach(function(a){u=Math.max(u,a.u);});
-  var n=fans.length,gap=u*1.5,w=gap*(n-1);
-  if(w>S.W-u*2.6)return null;
-  var cx=clamp((A.l+A.r)/2,u*1.3+w/2,S.W-u*1.3-w/2);
-  var rows=[A.b+u*1.5,A.t-u*1.3,A.b+u*2.7,A.t-u*2.5,S.bottom-u*.15,S.top+u*.6];
+  var gap=u*1.55,w=gap*(n-1);
+  if(w>S.W-u*3)return null;
+  var cx=clamp((A.l+A.r)/2,u*1.5+w/2,S.W-u*1.5-w/2);
+  /* よーいどん・だるまさんがころんだ は 手前の帯を あけてあるので、そこを 特等席にする */
+  var lane=P.sessions[0]&&(P.sessions[0].type==="race"||P.sessions[0].type==="daruma");
+  /* 走る あそびのときは、あけてある 手前の帯だけ（コースと かさならない） */
+  var rows=lane?[S.bottom-u*.3]:[A.b+u*1.7,A.t-u*1.5,S.bottom-u*.3,S.top+u*.9];
   for(var i=0;i<rows.length;i++){
-    var y=clamp(rows[i],S.top+u*.4,S.bottom-u*.1),ok=true,front=i>=4;
+    var y=clamp(rows[i],S.top+u*.6,S.bottom-u*.15),ok=true,front=i>=2;
     for(var k=0;k<n&&ok;k++){
       var x=cx-w/2+gap*k;
-      /* さいごの手（いちばん手前の れつ）は、あそび場と かさなっても そこに ならぶ */
       if(!S.clear(x,y,u)||(!front&&P.inArea(x,y,u,null)))ok=false;
     }
     if(ok)return {y:y,x0:cx-w/2,gap:gap,n:n};
@@ -1049,22 +1017,24 @@ function spectate(dt){
     P.animals.forEach(function(a){if(a.watch){a.watch=null;a.face=0;a.watchMove=false;a.galI=null;a.galSet=false;a.hold=false;a.rest=rand(.6,2);}});
     return;
   }
-  /* ならぶ場所は ころころ変えない（何度も歩きなおさないように） */
-  if(fans.length&&(!s.gal||s.galN!==fans.length||(s.galT||0)<P.now)){
-    var g=gallery(fans);
+  /* あそびが はじまったら すぐ、何人 見るかを きめて シートを しく。そのあとは 動かさない */
+  if(fans.length&&!s.gal&&(s.galT||0)<P.now){
+    var u0=fans.reduce(function(v,a){return Math.max(v,a.u);},P.U);
+    var n0=Math.min(Math.max(fans.length,2),8),g=null;
+    for(var tryN=n0;tryN>=2&&!g;tryN--)g=gallery(tryN,u0);
     if(g){
-      s.gal=g;s.galN=fans.length;s.galT=P.now+7;
-      fans.slice().sort(function(p,q){return p.x-q.x;}).forEach(function(a,i){a.galI=i;});
-    }else if(!s.gal)s.galT=P.now+2;
+      s.gal=g;s.galN=g.n;s.matU=u0;
+      fans.slice().sort(function(p,q){return p.x-q.x;}).forEach(function(a,i){a.galI=Math.min(i,g.n-1);});
+    }else s.galT=P.now+2;
   }
+  if(s.gal&&fans.length>s.galN)s.galN=Math.min(fans.length,s.gal.n);
   /* 見ている子がいるときだけ、ブルーシートを しく */
   if(s.gal&&fans.length){
-    s.matU=fans.reduce(function(v,a){return Math.max(v,a.u);},P.U);
     if(!s.mat){
       s.mat={y:0,draw:function(g){drawMat(g,s);}};
       s.props=s.props||[];s.props.push(s.mat);P.props.push(s.mat);
     }
-    s.mat.y=s.gal.y-s.matU*1.5;
+    s.mat.y=s.gal.y-(s.matU||P.U)*1.6;
   }
   var cx=0;s.m.forEach(function(m){cx+=m.x;});cx/=s.m.length;
   fans.forEach(function(a){
@@ -1072,7 +1042,7 @@ function spectate(dt){
     var G=s.gal;
     if(G){
       var i=clamp(a.galI==null?0:a.galI,0,G.n-1),sx=G.x0+G.gap*i,sy=G.y;
-      if(Math.hypot(a.x-sx,(a.y-sy)*1.3)>a.u*.45){a.watchMove=true;a.galSet=false;a.hold=false;go(a,sx,sy,1.15);return;}
+      if(Math.hypot(a.x-sx,(a.y-sy)*1.3)>a.u*.45){a.watchMove=true;a.galSet=false;a.hold=false;go(a,sx,sy,1.75);return;}
       /* すわったら うごかない（あしも 向きも そのまま）。することは おうえんの ことばだけ */
       if(!a.galSet){a.galSet=true;a.face=cx>a.x?1:-1;a.dir=a.face;}
       a.hold=true;a.moving=false;a.tx=a.x;a.ty=a.y;a.rest=1;a.mult=1;a.z=0;a.vz=0;

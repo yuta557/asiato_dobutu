@@ -13,7 +13,8 @@ function addProp(s,pr){s.props=s.props||[];s.props.push(pr);P.props.push(pr);}
 /* 横いっぱいに走る・ならぶための高さを n こ えらぶ（池と案内の文字をさける） */
 function lanes(n,x0,x1,u){
   /* いちばん手前は 見ている子が ならぶ場所として あけておく */
-  var top=S.top+u*.3,bot=S.bottom-u*1.5,c=[],cNoBush=[];
+  /* いちばん手前は 見ている子の ブルーシート用に あけておく */
+  var top=S.top+u*.3,bot=S.bottom-u*2.1,c=[],cNoBush=[];
   for(var i=0;i<=28;i++){
     var y=top+(bot-top)*i/28;if(!S.laneOK(y,x0,x1,u))continue;
     c.push(y);
@@ -63,7 +64,7 @@ function fitLanes(s,list,x0,x1,u){
   return ys;
 }
 /* 何レーンまで ゆったり ならべるか（これより多い人数では あそびを始めない） */
-X.laneRoom=function(u){return Math.max(2,Math.floor((S.bottom-S.top-u*.5)/(u*1.25))+1);};
+X.laneRoom=function(u){return Math.max(2,Math.floor((S.bottom-S.top-u*2.6)/(u*1.25))+1);};
 /* ならぶのに 間に合わなかった子。線のすぐ近くなら きっちりそろえ、
    とおくて まにあわない子は あそびから ぬけて 見ているがわにまわる（線より前から スタートしないように） */
 function lineUp(s,x,keep){
