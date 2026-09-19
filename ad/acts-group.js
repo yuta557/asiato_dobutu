@@ -418,9 +418,13 @@ ACT.oni={
           if(near&&near!==c.aim){c.aim=near;c.aimT=P.now+rand(2.5,4);}
           else if(near)c.aimT=P.now+rand(2.5,4);
         }
-        var t=c.aim;if(!t)return;
-        c.face=0;go(c,t.x,t.y,1.45);
-        if(Math.hypot(c.x-t.x,(c.y-t.y)*1.5)<(c.u+t.u)*.5&&s.tt>1.2)catchIt(s,c,t);
+        var t=c.aim;if(t){c.face=0;go(c,t.x,t.y,1.45);}
+        /* おいかけている子だけでなく、すぐそばに 来た子は だれでも タッチ
+           （体が かさなるほど 近づいたら、まだ はやくても タッチしたことにする） */
+        s.rs.slice().forEach(function(r){
+          var reach=Math.hypot(c.x-r.x,(c.y-r.y)*1.5);
+          if(reach<(c.u+r.u)*.5&&(s.tt>1.2||reach<(c.u+r.u)*.42))catchIt(s,c,r);
+        });
       });
       /* にげる子は いちばん近い おにから はなれる */
       s.rs.forEach(function(r){

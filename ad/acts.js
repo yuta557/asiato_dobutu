@@ -8,7 +8,14 @@ var schedT=1.2,groupCool=0,bigCool=4;
 
 function go(a,x,y,mult){a.tx=clamp(x,a.u*.8,S.W-a.u*.8);a.ty=clamp(y,S.top,S.bottom);a.mult=mult||1;a.rest=0;}
 function arrived(a){return Math.hypot(a.tx-a.x,a.ty-a.y)<a.u*.35;}
-function faceTo(a,b){a.face=b.x>a.x?1:-1;a.dir=a.face;}
+/* あいてが ほぼ 正面（おなじ よこ位置）のときは 向きを かえない。
+   でないと 右・左 に ぱたぱた 向きなおして見える */
+function faceTo(a,b){
+  var d=b.x-a.x;
+  if(Math.abs(d)<a.u*.45&&a.dir)a.face=a.dir;
+  else a.face=d>0?1:-1;
+  a.dir=a.face;
+}
 function next(s){s.st++;s.tt=0;s.flag={};}
 function once(s,k){if(s.flag[k])return false;s.flag[k]=true;return true;}
 function mid(a,b){return {x:clamp((a.x+b.x)/2,S.W*.18,S.W*.82),y:clamp((a.y+b.y)/2,S.top+10,S.bottom-10)};}
@@ -73,7 +80,9 @@ function roll(s,missed,far){
     if(P.sessions.indexOf(s)<0)return;
     /* うんと とおくまで いってしまったときだけ、あそんでいる みんなで とりに行く かけっこ */
     var nearD=1e9;s.m.forEach(function(a){if(alive(s,a))nearD=Math.min(nearD,Math.hypot(a.x-B.x,a.y-B.y));});
-    if(s.m.length>=2&&nearD>P.U*3.4){
+    /* ころがった先に ただ歩いている子がいたら、その子が ひろってくれる */
+    var passer=P.animals.filter(function(a){return !a.sess&&!a.leaving&&!a.helping&&!a.hidden&&!a.chat&&a.age>3.2&&Math.hypot(a.x-B.x,a.y-B.y)<P.U*2.8;})[0];
+    if(s.m.length>=2&&nearD>P.U*3.4&&!passer){
       s.raced=true;s.fetch={a:null,race:true,got:false,t:0,back:false,missed:missed,by:false};
       P.say(missed,"まって〜、ボール〜！",1.3);
       var o2=s.m.filter(function(a){return a!==missed&&alive(s,a);})[0];
@@ -89,7 +98,8 @@ function startFetch(s,missed,noBy){
   var B=s.ball,d=function(a){return Math.hypot(a.x-B.x,a.y-B.y);};
   var mem=s.m.filter(function(a){return alive(s,a)&&(s.m.length<3||a!==missed);}).sort(function(p,q){return d(p)-d(q);})[0]||missed;
   var by=noBy?null:P.animals.filter(function(a){return !a.sess&&!a.leaving&&!a.helping&&!a.hidden&&a.age>3.2;}).sort(function(p,q){return d(p)-d(q);})[0];
-  var useBy=!!by&&d(by)<Math.min(P.U*5,d(mem)*.7);
+  /* すぐそばを 歩いていた子がいたら、その子が ひろって なげかえす */
+  var useBy=!!by&&(d(by)<P.U*2.8||d(by)<Math.min(P.U*5,d(mem)*.7));
   var f=useBy?by:mem;
   s.fetch={a:f,got:false,t:0,back:false,missed:missed,by:useBy};
   if(useBy){by.helping=s;by.watch=null;by.watchMove=false;}
@@ -146,8 +156,10 @@ var ACT={
   tag:{init:function(s){
       s.m.sort(function(p,q){return (S.clear(q.x,q.y,q.u)?1:0)-(S.clear(p.x,p.y,p.u)?1:0);});
       s.c=s.m[1];s.r=s.m[0];s.rs=[s.m[0]];
-      s.dur=rand(9,12);s.swaps=0;s.pause=0;s.stun=0;s.rstun=0;s.minT=3.5;s.runAt=.4;s.talkT=2.4;s.joinT=rand(4,6);
-      P.say(s.c,"まてまて〜",1.3);},
+      /* はじめに おには すこし かぞえて、にげる子に 間をあげる */
+      s.pause=rand(2.4,3.2);
+      s.dur=rand(9,12)+s.pause;s.swaps=0;s.stun=0;s.rstun=0;s.minT=s.pause+2;s.runAt=.5;s.talkT=s.pause+2.4;s.joinT=rand(4,6)+s.pause;
+      P.say(s.c,pick(["かぞえるから にげて〜","いーち、にーい…"]),1.6);},
     update:function(s,dt){
       var c=s.c;
       s.rs=s.rs.filter(function(a){return alive(s,a);});
@@ -268,7 +280,9 @@ var ACT={
       });
       s.talkT-=dt;
       if(s.talkT<0&&!counting){s.talkT=rand(1.8,2.8);if(Math.random()<.5)P.say(pick(s.rs),pick(["にげろ〜","こっちだよ〜","きゃ〜！"]),1.2);else P.say(c,pick(["まてまて〜","まて〜！","つかまえるぞ〜"]),1.2);}
-      if(canCatch&&Math.hypot(dx,dy*1.5)<(c.u+r.u)*.5){
+      /* 体が かさなるほど 近づいたら、まだ はやくても タッチしたことにする */
+      var reach=Math.hypot(dx,dy*1.5),deep=reach<(c.u+r.u)*.42;
+      if((canCatch||(deep&&!counting&&!s.endSoon&&s.tt>.6))&&reach<(c.u+r.u)*.5){
         P.say(c,"タッチ！",1.1);P.jump(c,3.5);
         var caught=r,tagger=c;
         P.later(.5,function(){if(alive(s,caught))P.say(caught,"つかまった〜",1.2);});
@@ -902,7 +916,7 @@ function spectate(dt){
     }else if(a.keepOut){a.watchMove=true;a.galSet=false;return;}
     /* ならんだら、その場で あそびの方を見る */
     a.watchMove=false;a.tx=a.x;a.ty=a.y;a.rest=Math.max(a.rest,.6);a.mult=1;
-    a.face=cx>a.x?1:-1;
+    if(Math.abs(cx-a.x)>a.u*.5)a.face=cx>a.x?1:-1;else a.face=a.dir||a.face||1;
     if(a.dir!==a.face&&P.now-(a.dirT||-9)>.5){a.dir=a.face;a.dirT=P.now;}
   });
   s.cheerT=(s.cheerT==null?rand(4,6):s.cheerT)-dt;

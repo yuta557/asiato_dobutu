@@ -135,6 +135,9 @@ function blockedAt(a,x,y){
   }
   return worst;
 }
+/* 池の上は 歩かない（入ってしまっているときは 出られるように、入る一歩だけ とめる） */
+function pondBlock(a,x,y){return S.inPond(x,y,1)&&!S.inPond(a.x,a.y,1);}
+function canStep(a,x,y){return !blockedAt(a,x,y)&&!pondBlock(a,x,y);}
 /* 前にほかの子がいたら、横によけながら進む（同じあそびの なかまどうしは よけない） */
 function avoid(a,ux,uy){
   var sx=0,sy=0;
@@ -239,7 +242,19 @@ function stepAnimal(a,dt){
     }
     if(a.rest>0)a.rest-=dt;
     else if(Math.hypot(a.tx-a.x,a.ty-a.y)<a.u*.3){a.rest=rand(1.6,4);var p=P.roomySpot(a);a.tx=p.x;a.ty=p.y;}
+    /* 池のまえで 立ち往生したら、べつの場所へ */
+    if(a.stuckT>1.2){a.stuckT=0;var q2=P.roomySpot(a);a.tx=q2.x;a.ty=q2.y;a.rest=0;}
   }
+  /* 池の中に いるときは、あそび中でも いちばん近い きしへ 上がる。
+     みんな おなじ場所を めざすと つまるので、すこしずつ ずらす */
+  if(!a.leaving&&S.inPond(a.x,a.y,1)){
+    if(!a.bank||(a.bankT||0)<P.now){
+      var bk=S.pondSpot(a.x),out2=bk.x>S.pond.x?1:-1;
+      a.bank={x:clamp(bk.x+out2*a.u*(.8+Math.random()*.8),a.u,S.W-a.u),y:clamp(bk.y+rand(-1.1,1.1)*a.u,S.top,S.bottom)};
+      a.bankT=P.now+2.2;
+    }
+    a.tx=a.bank.x;a.ty=a.bank.y;a.hold=false;a.rest=0;a.sleep=false;
+  }else a.bank=null;
   var dx=a.tx-a.x,dy=a.ty-a.y,d=Math.hypot(dx,dy);
   if(a.bumpStun>0){a.bumpStun-=dt;a.shake=a.bumpStun>0?Math.sin(P.now*26)*a.u*.05:0;}
   var wants=d>a.u*.25&&(a.rest<=0||a.sess||a.leaving)&&!a.hold&&!a.sleep&&!(a.bumpStun>0);
@@ -248,24 +263,39 @@ function stepAnimal(a,dt){
   /* 向きは、はっきり左右に動いたときだけ、少し間をあけて変える（ぶるぶる向きが変わらないように） */
   function move(){
     var v=avoid(a,dx/d,dy/d),s=Math.min(d,speed*dt),nd=v.x>0?1:-1;
-    var nx=a.x+v.x*s,ny=a.y+v.y*s,hit=blockedAt(a,nx,ny);
+    var nx=a.x+v.x*s,ny=a.y+v.y*s,hit=canStep(a,nx,ny)?null:(blockedAt(a,nx,ny)||"pond");
     if(hit){
-      /* おしのけるのではなく、かさなる ほうへは そもそも 進まない。
+      /* おしのけるのではなく、かさなる ほうへ（また 池の上へ）は そもそも 進まない。
          たてだけ・よこだけ なら 進めるときは すべるように よける */
-      if(!blockedAt(a,a.x,ny)){nx=a.x;}
-      else if(!blockedAt(a,nx,a.y)){ny=a.y;}
+      if(canStep(a,a.x,ny)){nx=a.x;}
+      else if(canStep(a,nx,a.y)){ny=a.y;}
       else{
-        nx=a.x;ny=a.y;
+        nx=a.x;ny=a.y;a.stuckT=(a.stuckT||0)+dt;
         /* まっこうから ぶつかる ときは、たまに こける */
-        var hv=Math.hypot(hit.tx-hit.x,hit.ty-hit.y)||1,hd=(v.x*(hit.tx-hit.x)+v.y*(hit.ty-hit.y))/hv;
-        if(hd<-.5&&a.moving&&hit.moving&&!a.hold&&!hit.hold&&
+        var hv=hit==="pond"?1:(Math.hypot(hit.tx-hit.x,hit.ty-hit.y)||1);
+        var hd=hit==="pond"?0:(v.x*(hit.tx-hit.x)+v.y*(hit.ty-hit.y))/hv;
+        if(hit!=="pond"&&hd<-.5&&a.moving&&hit.moving&&!a.hold&&!hit.hold&&
            P.now-(a.bumpT||-9)>8&&P.now-(hit.bumpT||-9)>8&&Math.random()<dt*.8)stumble(a,hit);
       }
     }
+    if(nx!==a.x||ny!==a.y)a.stuckT=0;
     a.x=nx;a.y=ny;
+    /* もし 池の中に いるときは ぱしゃぱしゃ する */
+    if(S.inPond(a.x,a.y,1)&&a.z<=0){
+      a.wet=Math.max(a.wet||0,.4);
+      a.splashT=(a.splashT||0)-dt;
+      if(a.splashT<=0){
+        a.splashT=rand(.45,.8);
+        P.note(a.x,a.y-a.u*.25,"ぱしゃ","#4A92C6");
+        for(var sp2=0;sp2<7;sp2++)P.sparks.push({x:a.x,y:a.y,a:-PI*(.15+.7*sp2/6),born:P.now,col:2,u:a.u*.8});
+      }
+    }
     /* つなひきのように、うしろに下がっても向きを変えない */
     if(a.faceLock){a.dir=a.face||a.dir;return;}
-    if(nd!==a.dir&&Math.abs(v.x)>.3&&P.now-(a.dirT||-9)>.35){a.dir=nd;a.dirT=P.now;}}
+    /* 向きは ならした よこの うごきで きめる。
+       ちいさく ゆれるたびに 右・左 と ぱたぱた しないように */
+    a.vxs=(a.vxs||0)*.88+v.x*.12;
+    if((a.vxs>0?1:-1)!==a.dir&&Math.abs(a.vxs)>.34&&P.now-(a.dirT||-9)>.8){a.dir=a.vxs>0?1:-1;a.dirT=P.now;}}
   if(m==="hop"){
     if(wants&&a.z===0&&a.vz===0&&a.land===0)a.vz=a.u*(a.mult>1.2?4:3.4);
     if((a.z>0||a.vz>0)&&d>1)move();
@@ -273,7 +303,7 @@ function stepAnimal(a,dt){
     /* あしの ふりは ゆっくりめに。はやく走るときだけ 少しはやく（それでも 上限をつける） */
     move();a.ph+=dt*(m==="waddle"?5:Math.min(speed/a.u,2.4)*2.6);
   }
-  if(!wants&&a.face&&a.face!==a.dir&&P.now-(a.dirT||-9)>.35){a.dir=a.face;a.dirT=P.now;}
+  if(!wants&&a.face&&a.face!==a.dir&&P.now-(a.dirT||-9)>.6){a.dir=a.face;a.dirT=P.now;}
   if(a.knock){a.x+=a.knock*dt;a.knock*=Math.pow(.02,dt);if(Math.abs(a.knock)<2)a.knock=0;}
   if(a.z>0||a.vz>0){a.vz-=a.u*15*dt;a.z+=a.vz*dt;if(a.z<=0){a.z=0;a.vz=0;a.land=1;}}
   if(!a.leaving){a.x=clamp(a.x,a.u*.8,S.W-a.u*.8);a.y=clamp(a.y,S.top,S.bottom);bushStepOut(a,dt);}
@@ -310,7 +340,9 @@ function unstack(a,b,dt){
   /* あそんでいる子より、外の子のほうが よける */
   var wa=a.sess&&!b.sess?0:(!a.sess&&b.sess?2:1),wb=2-wa;
   var move=Math.min(need-ax,Math.max(a.u,b.u)*9*dt);
-  a.x+=s*move*.5*wa;b.x-=s*move*.5*wb;
+  var axn=a.x+s*move*.5*wa,bxn=b.x-s*move*.5*wb;
+  if(!pondBlock(a,axn,a.y))a.x=axn;
+  if(!pondBlock(b,bxn,b.y))b.x=bxn;
 
 }
 
