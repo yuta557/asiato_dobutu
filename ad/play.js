@@ -276,6 +276,20 @@ function stepAnimal(a,dt){
     }
     a.tx=a.bank.x;a.ty=a.bank.y;a.hold=false;a.rest=0;a.sleep=false;
   }else a.bank=null;
+  /* 水ぎわで つまったら、池の うえか したを まわって 行く */
+  if(a.detourT>0){
+    a.detourT-=dt;a.tx=a.detour.x;a.ty=a.detour.y;a.rest=0;a.hold=false;
+    if(Math.hypot(a.tx-a.x,a.ty-a.y)<a.u*.4)a.detourT=0;
+  }else if(!a.sess&&P.now-(a.pondHit==null?-99:a.pondHit)<.25){
+    var pw=S.pond;
+    if(pw){
+      var upSide=Math.abs(a.y-(pw.y-pw.ry*2-a.u*.7))<Math.abs(a.y-(pw.y+pw.ry*2+a.u*.7));
+      var oy=upSide?-(pw.ry*2+a.u*.7):(pw.ry*2+a.u*.7);
+      a.detour={x:clamp(a.x+(a.tx>a.x?1:-1)*a.u*1.8,a.u*1.3,S.W-a.u*1.3),
+                y:clamp(pw.y+oy,S.top+a.u*.5,S.bottom-a.u*.3)};
+      a.detourT=2.4;a.rest=0;a.pondHit=null;
+    }
+  }
   /* はしっこで 外へ 行こうとして つまらないように。
      むきを かえるか、そのまま 出ていく */
   var edge=a.x<=a.u*.9?-1:(a.x>=S.W-a.u*.9?1:0);
@@ -283,7 +297,7 @@ function stepAnimal(a,dt){
   if(a.edgeT>.6){
     a.edgeT=0;
     if(a.sess||a.chat||a.watch||a.helping)a.tx=clamp(a.tx,a.u*1.5,S.W-a.u*1.5);
-    else if(P.animals.length>4&&Math.random()<.3){
+    else if(P.animals.length>6&&Math.random()<.12){
       a.leaving=true;a.hold=false;a.rest=0;a.mult=1.3;a.tx=edge>0?S.W+a.u*3:-a.u*3;a.ty=a.y;
     }else{var qe=P.farSpot(a);a.tx=qe.x;a.ty=qe.y;a.rest=0;}
   }
@@ -322,6 +336,7 @@ function stepAnimal(a,dt){
       else if(canStep(a,nx,a.y)){ny=a.y;}
       else{
         nx=a.x;ny=a.y;a.stuckT=(a.stuckT||0)+dt;
+        if(hit==="pond")a.pondHit=P.now;
         /* まっこうから ぶつかる ときは、たまに こける */
         var hv=hit==="pond"?1:(Math.hypot(hit.tx-hit.x,hit.ty-hit.y)||1);
         var hd=hit==="pond"?0:(v.x*(hit.tx-hit.x)+v.y*(hit.ty-hit.y))/hv;
