@@ -398,13 +398,18 @@ if("ResizeObserver" in window)new ResizeObserver(onResize).observe(stage);
 else window.addEventListener("resize",onResize);
 if(document.fonts&&document.fonts.load)document.fonts.load("20px Yomogi");
 
-var visible=false,running=false,prev=0;
-function loop(ts){
-  if(!visible){running=false;return;}
-  if(D.on&&prev)D.gap(ts-prev);
-  if(prev)watchQuality(ts-prev);
-  frame(prev?Math.min(.05,(ts-prev)/1000):0);prev=ts;
-  requestAnimationFrame(loop);
+var visible=false,running=false,prev=0,gen=0,beat=Date.now();
+/* うごかす ループ。スリープや タブの切りかえで 止まってしまっても かけなおせるよう、
+   世代（gen）をつけて、ふるいループは じぶんで 終わるようにする */
+function makeLoop(my){
+  return function loop(ts){
+    if(!visible||my!==gen){if(my===gen)running=false;return;}
+    if(D.on&&prev)D.gap(ts-prev);
+    if(prev)watchQuality(ts-prev);
+    frame(prev?Math.min(.05,(ts-prev)/1000):0);prev=ts;
+    beat=Date.now();
+    requestAnimationFrame(loop);
+  };
 }
 var D=AD.dbg;
 function frame(dt){
@@ -440,7 +445,26 @@ function frame(dt){
     var np=0;strokes.forEach(function(st){np+=st.prints.length;});
     D.end({animals:P.animals.length,prints:np,bubbles:P.bubbles.length,w:cv.width,h:cv.height,dpr:AD.R});}
 }
-function start(){if(!running){running=true;prev=0;requestAnimationFrame(loop);}}
+function start(){
+  if(!visible)return;
+  running=true;prev=0;beat=Date.now();
+  requestAnimationFrame(makeLoop(++gen));
+}
+/* いま 草原が 画面に 出ているか（見まもりの しくみに たよらず じぶんで しらべる） */
+function onScreen(){
+  if(document.hidden)return false;
+  var h=window.innerHeight||0,w=window.innerWidth||0;
+  if(!h||!w)return true;                       /* 大きさが わからないときは 動かしておく */
+  var r=stage.getBoundingClientRect();
+  return r.bottom>0&&r.top<h&&r.right>0&&r.left<w;
+}
+/* スリープ・タブ切りかえ・もどってきたとき：止まったままに ならないよう かけなおす */
+function wake(){if(onScreen()){visible=true;start();}}
+document.addEventListener("visibilitychange",wake);
+window.addEventListener("pageshow",wake);
+window.addEventListener("focus",wake);
+/* 見まわり：2秒いじょう うごいていなければ かけなおす */
+setInterval(function(){if(Date.now()-beat>2000)wake();},1500);
 if("IntersectionObserver" in window){
   new IntersectionObserver(function(es){visible=es[0].isIntersecting;if(visible)start();},{threshold:.02}).observe(stage);
 }else{visible=true;start();}
