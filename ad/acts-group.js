@@ -80,6 +80,8 @@ ACT.daruma={
     var sx=s.side<0?S.W-u*1.4:u*1.4;
     s.players=s.m.slice(1);s.caught=[];s.round=0;
     var ys=lanes(s.players.length,s.ox,sx,u);
+    /* いまの 上下の ならび順のまま レーンを わりあてる（すれちがわない） */
+    s.players.sort(function(p,q){return p.y-q.y;});
     s.oy=ys.reduce(function(v,y){return v+y;},0)/ys.length;
     go(oni,s.ox,s.oy,1.2);
     s.sx=sx;
@@ -203,7 +205,8 @@ ACT.race={
     /* みんながいる側からスタートして、反対側がゴール */
     s.x0=cx<S.W/2?u*1.3:S.W-u*1.3;s.x1=cx<S.W/2?S.W-u*1.3:u*1.3;
     var ys=lanes(s.m.length,s.x0,s.x1,u);
-    s.m.forEach(function(a,i){a.lane=ys[i];go(a,s.x0,ys[i],1.5);});
+    var order=s.m.slice().sort(function(p,q){return p.y-q.y;});
+    order.forEach(function(a,i){a.lane=ys[i];go(a,s.x0,ys[i],1.5);});
     s.order=[];
     var gx=s.x1,top=Math.min.apply(null,ys)-u*.4,bot=Math.max.apply(null,ys)+u*.4;
     addProp(s,{y:S.top-5,draw:function(g){
@@ -276,7 +279,9 @@ ACT.race={
 ACT.tug={
   init:function(s){
     var u=maxU(s.m),n=s.m.length,half=n/2;
-    s.L=s.m.slice(0,half);s.R=s.m.slice(half);s.o=0;
+    /* いま 左にいる子は 左チーム。まん中に近い子から ならぶ（すれちがわない） */
+    var byX=s.m.slice().sort(function(p,q){return p.x-q.x;});
+    s.L=byX.slice(0,half).reverse();s.R=byX.slice(half);s.o=0;
     /* つなの長さ（＝ならぶ間かく）は どうぶつの大きさから決める。せまいボードでは 少しつめる */
     var room=S.W*.44/u,inner=1.35;
     s.gap=half>1?clamp((room-inner)/(half-1),1.5,2):2;

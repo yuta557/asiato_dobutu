@@ -60,17 +60,20 @@ function pickFlee(s,r,c){
 function roll(s,missed,far){
   var B=s.ball,best=null;
   if(s.fetch&&s.fetch.by&&s.fetch.a){s.fetch.a.helping=null;s.fetch.a.hold=false;s.fetch.a.rest=rand(.8,1.6);}
-  for(var i=0;i<10;i++){
-    var an=Math.random()*PI*2,d=P.U*(far?rand(2.6,3.6):rand(2,3)),q={x:B.x+Math.cos(an)*d,y:B.y+Math.sin(an)*d*.5};
-    if(q.x>P.U&&q.x<S.W-P.U&&q.y>S.top&&q.y<S.bottom&&S.clear(q.x,q.y,P.U*.6)){best=q;break;}
+  /* とりそこねたときは、ときどき うんと とおくまで ころがる（入らないときだけ 少しずつ ちぢめる） */
+  var want=P.U*(far?(Math.random()<.6?rand(5.5,7.5):rand(2.6,3.6)):rand(2,3));
+  for(var i=0;i<16&&!best;i++){
+    var d=want*(1-i*.05),an=Math.random()*PI*2,q={x:B.x+Math.cos(an)*d,y:B.y+Math.sin(an)*d*.62};
+    if(q.x>P.U&&q.x<S.W-P.U&&q.y>S.top&&q.y<S.bottom&&S.clear(q.x,q.y,P.U*.6))best=q;
   }
   best=best||{x:clamp(B.x+(S.W/2-B.x)*.3,P.U,S.W-P.U),y:clamp(B.y,S.top,S.bottom)};
-  B.x0=B.x;B.y0=B.y;B.x1=best.x;B.y1=best.y;B.f=0;B.dur=.8;B.h=P.U*.8;B.fly=true;s.recv=null;s.fetch=null;
+  var roll2=Math.hypot(best.x-B.x,best.y-B.y);
+  B.x0=B.x;B.y0=B.y;B.x1=best.x;B.y1=best.y;B.f=0;B.dur=clamp(roll2/(P.U*3.2),.7,1.8);B.h=P.U*.8;B.fly=true;s.recv=null;s.fetch=null;
   B.onLand=function(){
     if(P.sessions.indexOf(s)<0)return;
-    /* とおくまで ころがったときは、ときどき みんなで とりに行く かけっこになる */
-    var far2=Math.hypot(B.x-(s.c?s.c.x:B.x),B.y-(s.c?s.c.y:B.y));
-    if(s.m.length>=2&&!s.raced&&(far||far2>P.U*2.4)&&Math.random()<.6){
+    /* うんと とおくまで いってしまったときだけ、あそんでいる みんなで とりに行く かけっこ */
+    var nearD=1e9;s.m.forEach(function(a){if(alive(s,a))nearD=Math.min(nearD,Math.hypot(a.x-B.x,a.y-B.y));});
+    if(s.m.length>=2&&nearD>P.U*3.4){
       s.raced=true;s.fetch={a:null,race:true,got:false,t:0,back:false,missed:missed,by:false};
       P.say(missed,"まって〜、ボール〜！",1.3);
       var o2=s.m.filter(function(a){return a!==missed&&alive(s,a);})[0];
@@ -98,6 +101,10 @@ function ringSpots(c,n,R){
   var out=[];
   for(var i=0;i<n;i++){var an=-PI/2+i/n*PI*2+(n===4?PI/4:0);out.push({x:c.x+Math.cos(an)*R,y:c.y+Math.sin(an)*R*.6});}
   return out;
+}
+/* いまの ならび順のまま 場所をわりあてる（すれちがって 重ならないように） */
+function byAngle(m,c){
+  return m.slice().sort(function(p,q){return Math.atan2(p.y-c.y,p.x-c.x)-Math.atan2(q.y-c.y,q.x-c.x);});
 }
 
 /* ---- かくれんぼの てつだい ---- */
@@ -297,7 +304,8 @@ var ACT={
         var near={x:clamp(cx/n,S.W*.2,S.W*.8),y:clamp(cy/n,S.top+R*.6,S.bottom-R*.6)};
         var ok=function(c){return ringSpots(c,n,R).every(function(p){return S.clear(p.x,p.y,u);});};
         s.c=ok(near)?near:(S.safeSpot(u,near,ok)||near);
-        ringSpots(s.c,n,R).forEach(function(p,i){var a=s.m[i];a.spot=p;go(a,p.x,p.y);});
+        var order=byAngle(s.m,s.c);
+        ringSpots(s.c,n,R).forEach(function(p,i){var a=order[i];a.spot=p;go(a,p.x,p.y);});
       }
       s.ball={x:s.c.x,y:s.c.y,z:0,r:P.U*.2,spin:0,fly:false,f:0};P.balls.push(s.ball);
       s.h=s.m[0];s.kicks=0;s.goal=6+(n-2)*2;
@@ -374,7 +382,7 @@ var ACT={
         else if(!strong&&Math.random()<.6)P.say(h,pick(n>2?["つぎ、"+rc.sp.name+"！","それっ","パス！"]:["それっ","パス！","いくよ〜","えいっ"]),1);
         B.x0=B.x;B.y0=B.y;B.x1=rc.x+rc.dir*rc.u*.55;B.y1=rc.y;B.f=0;B.dur=strong?1.15:.85;B.h=P.U*(strong?2.6:1.4);B.fly=true;s.recv=rc;
         /* ときどき とりそこねて、ボールが ころがっていく */
-        if(!s.miss&&!s.raced&&s.kicks>1&&Math.random()<.14){s.miss=true;P.later(B.dur*.9,function(){if(alive(s,rc))P.say(rc,pick(["わっ、とれなかった〜","あっ、ボールが〜！"]),1.2);});}
+        if(!s.miss&&s.kicks>1&&Math.random()<.18){s.miss=true;P.later(B.dur*.9,function(){if(alive(s,rc))P.say(rc,pick(["わっ、とれなかった〜","あっ、ボールが〜！"]),1.2);});}
         B.onLand=function(){
           if(!alive(s,rc))return;
           if(s.miss){s.miss=false;roll(s,rc,true);return;}
@@ -527,7 +535,8 @@ var ACT={
         var near={x:clamp(cx/n,S.W*.2,S.W*.8),y:clamp(cy/n,S.top+R*.8,S.bottom-R*.7)};
         var ok=function(c){return ringSpots(c,n,R).every(function(p){return S.clear(p.x,p.y,u);});};
         s.c=ok(near)?near:(S.safeSpot(u,near,ok)||near);
-        ringSpots(s.c,n,R).forEach(function(p,i){go(s.m[i],p.x,p.y);});
+        var dorder=byAngle(s.m,s.c);
+        ringSpots(s.c,n,R).forEach(function(p,i){go(dorder[i],p.x,p.y);});
       }
       s.k=0;s.n=0;s.fast=0;s.ext=0;},
     update:function(s,dt){var a=s.m[0],b=s.m[1];
@@ -595,13 +604,30 @@ var ACT={
         var sx=clamp(bx,L.u,S.W-L.u)-bx,sy=clamp(by,S.top,S.bottom)-by;
         go(L,L.x+sx,L.y+sy,1.2);L.hold=false;s.leadMove=true;
       }
-      s.m.slice(1).forEach(function(f,i){var k=L.u*1.6*(i+1),q=P.unhidePoint(L.tx-dx/dl*k,L.ty-dy/dl*k*.6,f.u);go(f,q.x,q.y,1.6);});
+      var k=0;
+      s.m.slice(1).forEach(function(f,i){
+        k+=((i?s.m[i].u:L.u)+f.u)*1.05;
+        var q=P.unhidePoint(L.tx-dx/dl*k,L.ty-dy/dl*k*.6,f.u);go(f,q.x,q.y,1.6);
+      });
       P.say(L,"ならんで〜！",1.2);},
     update:function(s,dt){var L=s.m[0];
       if(s.st===1)return goodbye(s,s.m[s.m.length-1],L,s.tt,1.4);
       if(!s.lined){
         if(s.leadMove&&arrived(L)){s.leadMove=false;L.hold=true;}
-        if((s.m.slice(1).every(arrived)&&!s.leadMove)||s.tt>7){
+        /* うしろの子が ぜんぶ 先頭のうしろに ならぶまで 出発しない */
+        function atSlot(f,k){return Math.hypot(f.tx-f.x,f.ty-f.y)<f.u*(k||.5);}
+        var ready=!s.leadMove&&s.m.slice(1).every(function(f){return atSlot(f);});
+        if(!ready&&s.tt>12){
+          /* どうしても ならべない子は、今回は いっしょに行かない（歩きだしてから さそう） */
+          s.m.slice(1).forEach(function(f){
+            if(atSlot(f,1.3))return;
+            var i=s.m.indexOf(f);if(i<0)return;s.m.splice(i,1);
+            f.sess=null;f.hold=false;f.face=0;f.mult=1;f.rest=rand(.3,1);f.cool=rand(1,3);
+          });
+          if(s.m.length<2)return true;
+          ready=true;
+        }
+        if(ready){
           s.lined=true;s.tt=0;L.hold=false;
           s.m.slice(1).forEach(function(f){f.face=L.face;f.dir=L.face;});
           /* ならんだ順に 道すじをつくっておくと、うしろの子が そのまま ついていける */
@@ -618,12 +644,25 @@ var ACT={
       var lt=s.trail[s.trail.length-1];
       if(Math.hypot(L.x-lt.x,L.y-lt.y)>L.u*.2)s.trail.push({x:L.x,y:L.y});
       if(s.trail.length>400)s.trail.shift();
+      /* 先頭が すすんでいる むき（あとから入る子が うしろに つくのに つかう） */
+      var tl=s.trail.length,hx=0,hy=0;
+      if(tl>=2){hx=s.trail[tl-1].x-s.trail[tl-2].x;hy=s.trail[tl-1].y-s.trail[tl-2].y;}
+      if(!hx&&!hy){hx=L.tx-L.x;hy=L.ty-L.y;}
+      var hl=Math.hypot(hx,hy)||1;hx/=hl;hy/=hl;
+      var want=0;
       for(var i=1;i<s.m.length;i++){
         var f=s.m[i];
+        want+=(s.m[i-1].u+f.u)*1.05;
         if(f.lag>0){f.lag-=dt;f.hold=true;if(f.lag<=0){f.hold=false;f.catchT=2;P.say(f,"まって〜！",1.1);}continue;}
         f.catchT=Math.max(0,(f.catchT||0)-dt);
-        var want=i*L.u*1.6,acc=0,pt=s.trail[0];
+        var acc=0,pt=null;
         for(var j=s.trail.length-1;j>0;j--){acc+=Math.hypot(s.trail[j].x-s.trail[j-1].x,s.trail[j].y-s.trail[j-1].y);if(acc>=want){pt=s.trail[j-1];break;}}
+        /* 道すじが まだ みじかいときは、いま いちばん うしろの子の さらに うしろへ（横入りしない） */
+        var pv=s.m[i-1],gp=(pv.u+f.u)*1.05;
+        if(!pt)pt={x:pv.x-hx*gp,y:pv.y-hy*gp*.6};
+        /* 道すじが カーブしていると 前の子と ならんでしまうので、前の子から すこし はなす */
+        var vx=pt.x-pv.x,vy=pt.y-pv.y,vd=Math.hypot(vx,vy)||1;
+        if(vd<gp*.92){pt={x:pv.x+vx/vd*gp*.92,y:pv.y+vy/vd*gp*.92};}
         var tp=P.unhidePoint(pt.x,pt.y,f.u);
         go(f,tp.x,tp.y,f.catchT>0?1.8:1.05);
       }
@@ -632,8 +671,14 @@ var ACT={
       if(s.joinT<=0&&s.m.length<9){
         s.joinT=rand(2.5,4.5);
         var tail=s.m[s.m.length-1];
-        var g=P.animals.filter(function(a){return P.free(a)&&!a.chat&&AD.dist(a,tail)<P.U*7;})
-          .sort(function(p,q){return AD.dist(tail,p)-AD.dist(tail,q);})[0];
+        /* さそうのは、行列の うしろがわ にいる子だけ。
+           横から入ると 列を横切ってしまうので、うしろから ついてくる子に かぎる */
+        var g=P.animals.filter(function(a){
+          if(!P.free(a)||a.chat)return false;
+          var vx=a.x-tail.x,vy=(a.y-tail.y)*1.2,d=Math.hypot(vx,vy);
+          if(d>P.U*7||d<P.U*.6)return false;
+          return (vx*-hx+vy*-hy)/d>.3;
+        }).sort(function(p,q){return AD.dist(tail,p)-AD.dist(tail,q);})[0];
         if(g){
           g.sess=s;g.rest=0;g.hold=false;g.face=0;g.catchT=3;g.watch=null;g.watchMove=false;g.galI=null;
           s.m.push(g);

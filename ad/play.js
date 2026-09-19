@@ -213,7 +213,8 @@ function stepAnimal(a,dt){
     else if(Math.hypot(a.tx-a.x,a.ty-a.y)<a.u*.3){a.rest=rand(1.6,4);var p=P.roomySpot(a);a.tx=p.x;a.ty=p.y;}
   }
   var dx=a.tx-a.x,dy=a.ty-a.y,d=Math.hypot(dx,dy);
-  var wants=d>a.u*.25&&(a.rest<=0||a.sess||a.leaving)&&!a.hold&&!a.sleep;
+  if(a.bumpStun>0){a.bumpStun-=dt;a.shake=a.bumpStun>0?Math.sin(P.now*26)*a.u*.05:0;}
+  var wants=d>a.u*.25&&(a.rest<=0||a.sess||a.leaving)&&!a.hold&&!a.sleep&&!(a.bumpStun>0);
   var m=a.sp.motion,speed=a.u*(m==="hop"?2.0:m==="waddle"?1.25:1.55)*a.mult*(P.reduced?.6:1);
   a.moving=wants;
   /* 向きは、はっきり左右に動いたときだけ、少し間をあけて変える（ぶるぶる向きが変わらないように） */
@@ -235,6 +236,42 @@ function stepAnimal(a,dt){
   else a.alpha=clamp(Math.min(a.x+a.u*2,S.W+a.u*2-a.x)/(a.u*2),0,1);
 }
 
+/* ---- かさなりすぎを なくす ----
+   ・よこ（おなじ おくゆき）で 体の6わり いじょう かさなるのは だめ
+   ・手前と おくの かさなりは よいが、うしろの子の 顔まで かくれるのは だめ
+   ・うまれたては のぞく（すぐ 散らばる）
+   ときどき ぶつかって こける */
+function stumble(a,b){
+  a.bumpT=b.bumpT=P.now;
+  [a,b].forEach(function(z){
+    var o=z===a?b:a,s=z.x-o.x>=0?1:-1;
+    z.knock=s*z.u*3.4;z.bumpStun=.75;P.jump(z,1.5);
+  });
+  P.note((a.x+b.x)/2,Math.min(P.headY(a),P.headY(b))-4,"ドン！",AD.INK);
+  P.say(a,AD.pick(["わっ！","おっとっと〜","いたた…"]),1.2);
+  P.later(.55,function(){if(P.animals.indexOf(b)>=0)P.say(b,AD.pick(["ごめん〜","びっくりした〜","だいじょうぶ？"]),1.2);});
+}
+function unstack(a,b,dt){
+  if(a.hidden||b.hidden||a.leaving||b.leaving)return;
+  if((a.scatter||0)>0||(b.scatter||0)>0)return;
+  var dx=a.x-b.x,ax=Math.abs(dx),dy=Math.abs(a.y-b.y),near=(a.u+b.u)*.38,need;
+  if(dy<=near)need=(a.u+b.u)-1.2*Math.min(a.u,b.u);          /* よこならび */
+  else{
+    var back=a.y<b.y?a:b,front=back===a?b:a;
+    if(P.headY(back)+back.u*.62<=P.headY(front))return;       /* うしろの子の 顔が 見えている */
+    need=(a.u+b.u)*.5;
+  }
+  if(ax>=need)return;
+  var s=dx>=0?1:-1;if(!dx)s=Math.random()<.5?1:-1;
+  /* あそんでいる子より、外の子のほうが よける */
+  var wa=a.sess&&!b.sess?0:(!a.sess&&b.sess?2:1),wb=2-wa;
+  var move=Math.min(need-ax,Math.max(a.u,b.u)*9*dt);
+  a.x+=s*move*.5*wa;b.x-=s*move*.5*wb;
+  /* ぶつかって こけるのは たまに（あそんでいる子は そのまま） */
+  if(ax<need*.55&&a.moving&&b.moving&&!a.sess&&!b.sess&&!a.chat&&!b.chat&&
+     P.now-(a.bumpT||-9)>8&&P.now-(b.bumpT||-9)>8&&Math.random()<.2)stumble(a,b);
+}
+
 P.update=function(dt){
   P.now+=dt;
   P.updateArea();
@@ -245,7 +282,9 @@ P.update=function(dt){
   var L=P.animals;
   for(var i=0;i<L.length;i++)for(var j=i+1;j<L.length;j++){
     var a=L[i],b=L[j];
-    if(a.leaving||b.leaving||(a.sess&&a.sess===b.sess)||a.hidden||b.hidden)continue;
+    if(a.leaving||b.leaving||a.hidden||b.hidden)continue;
+    unstack(a,b,dt);
+    if(a.sess&&a.sess===b.sess)continue;
     var dx=a.x-b.x,dy=(a.y-b.y)*2,d=Math.hypot(dx,dy),min=(a.u+b.u)*.8;
     /* ぴったり同じ場所（同時にうまれたときなど）は、むきを決められないので すこしずらす */
     if(d<.01){var an=Math.random()*TAU;dx=Math.cos(an)*.5;dy=Math.sin(an)*.5;d=.5;}
