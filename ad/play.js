@@ -53,11 +53,11 @@ P.farSpot=function(a){
   return p;
 };
 P.later=function(sec,fn){P.queue.push({t:P.now+sec,fn:fn});};
-P.say=function(a,text,dur){
+P.say=function(a,text,dur,chorus){
   if(!a||!text)return;
   /* おなじ ことばが いま ほかの子の ふきだしに 出ているときは、かさねて 出さない
      （おなじ セリフの ふきだしが 2つ ならんで 見えないように）。口だけ うごかす */
-  var dup=P.bubbles.some(function(b){return b.a!==a&&b.text===text&&P.now-b.born<Math.min(b.dur,1.8);});
+  var dup=!chorus&&P.bubbles.some(function(b){return b.a!==a&&b.text===text&&P.now-b.born<Math.min(b.dur,1.8);});
   if(dup){a.talk=.45;return;}
   var same=P.bubbles.some(function(b){return b.a===a&&b.text===text;});
   P.bubbles=P.bubbles.filter(function(b){return b.a!==a;});

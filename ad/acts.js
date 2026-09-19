@@ -103,7 +103,10 @@ function roll(s,missed,far){
   best=best||{x:clamp(B.x+(S.W/2-B.x)*.3,P.U,S.W-P.U),y:clamp(B.y,S.top,S.bottom)};
   var roll2=Math.hypot(best.x-B.x,best.y-B.y);
   B.x0=B.x;B.y0=B.y;B.x1=best.x;B.y1=best.y;B.f=0;B.dur=clamp(roll2/(P.U*3.2),.7,1.8);B.h=P.U*.8;B.fly=true;s.recv=null;s.fetch=null;
+  /* ころがっている あいだは パスでは ないので、「いいパス〜」とは 言わない */
+  s.loose=true;s.lastMissed=missed;s.backPass=false;
   B.onLand=function(){
+    s.loose=false;
     if(P.sessions.indexOf(s)<0)return;
     /* うんと とおくまで いってしまったときだけ、あそんでいる みんなで とりに行く かけっこ */
     var nearD=1e9;s.m.forEach(function(a){if(alive(s,a))nearD=Math.min(nearD,Math.hypot(a.x-B.x,a.y-B.y));});
@@ -422,6 +425,7 @@ var ACT={
       }
       s.ball={x:s.c.x,y:s.c.y,z:0,r:P.U*.2,spin:0,fly:false,f:0};P.balls.push(s.ball);
       s.h=s.m[0];s.kicks=0;s.goal=6+(n-2)*2;
+      s.m.forEach(function(a){a.gotBall=0;});s.h.gotBall=1;
       },
     update:function(s,dt){var B=s.ball,n=s.m.length,h=s.h;
       function faceAll(to){s.m.forEach(function(a){if(a!==to&&alive(s,a))faceTo(a,to);});}
@@ -477,7 +481,8 @@ var ACT={
             var to=alive(s,F.missed)?F.missed:s.m.filter(function(a){return alive(s,a);})[0];
             faceTo(f,to);P.jump(f,2.6);P.say(f,"はい、どうぞ！",1.2);
             B.x0=B.x;B.y0=B.y;B.x1=to.x+to.dir*to.u*.55;B.y1=to.y;B.f=0;B.dur=.95;B.h=P.U*1.6;B.fly=true;
-            B.onLand=function(){if(!alive(s,to))return;s.h=to;s.wait=.9;P.jump(to,2.2);P.say(to,"ありがとう！",1.1);};
+            s.backPass=true;s.recv=to;
+            B.onLand=function(){s.backPass=false;s.recv=null;if(!alive(s,to))return;s.h=to;s.wait=.9;P.jump(to,2.2);P.say(to,"ありがとう！",1.1);};
             f.helping=null;f.hold=false;f.face=0;f.rest=rand(1,2);s.fetch=null;
           }
         }else{
@@ -500,7 +505,12 @@ var ACT={
         var rc;
         if(s.nextRecv&&alive(s,s.nextRecv)&&s.nextRecv!==h){rc=s.nextRecv;s.thanks=true;}
         else if(n===2)rc=others[0];
-        else{var nx=s.m[(s.m.indexOf(h)+1)%n];rc=Math.random()<.7&&nx!==h&&alive(s,nx)?nx:pick(others);}
+        else{
+          /* まだ あまり もらっていない子に まわす（ひとりだけ 仲間はずれに ならないように） */
+          var mn=1e9;others.forEach(function(o){mn=Math.min(mn,o.gotBall||0);});
+          var least=others.filter(function(o){return (o.gotBall||0)<=mn;});
+          rc=Math.random()<.85?pick(least):pick(others);
+        }
         s.nextRecv=null;
         var strong=s.strong,thanks=s.thanks;s.strong=false;s.thanks=false;faceTo(h,rc);faceTo(rc,h);P.jump(h,strong?3.6:2.6);
         if(thanks)P.say(h,"はい、どうぞ！",1.1);
@@ -514,6 +524,7 @@ var ACT={
           if(s.miss){s.miss=false;roll(s,rc,true);return;}
           s.recv=null;P.jump(rc,2.2);
           if(thanks)P.say(rc,"ありがとう！",1);else if(Math.random()<.4)P.say(rc,pick(["とった！","ナイス！","じょうず〜！"]),1);
+          rc.gotBall=(rc.gotBall||0)+1;
           s.h=rc;s.kicks++;s.wait=.5;};
       }
     },
@@ -530,7 +541,16 @@ var ACT={
         return;
       }
       if(B.fly&&a===s.recv){tapLine(a,"ballMiss",["わっ、とれなかった〜","あっ、ボールが〜！"]);if(!s.miss){s.miss=true;P.jump(a,3.8);}return;}
-      /* とりそこねる パスのときは「いいパス〜」と 言わない */
+      /* ころがっている／なげかえして もらっている／とりそこねる パス のときは
+         「いいパス〜」とは 言わない */
+      if(B.fly&&s.loose){
+        tapLine(a,"ballLoose",a===s.lastMissed?["あっ、ボールが〜！","ごめん、とれなかった〜"]:["ボール、ころがってる〜","だれか とって〜！"]);
+        return;
+      }
+      if(B.fly&&s.backPass){
+        tapLine(a,"ballBack",a===s.recv?["キャッチ するよ〜","ありがとう〜！"]:["よかった、もどってきた〜","はやく つづきしよ〜"]);
+        return;
+      }
       if(B.fly){
         if(s.miss)tapLine(a,"ballGoMiss",["あーっ、とれるかな…？","がんばって〜！"]);
         else tapLine(a,"ballGo",["とどけ〜！","いいパス〜"]);
@@ -687,8 +707,11 @@ var ACT={
             P.note(s.c.x,hy,"♪");
           }}
         if(s.n>=8){
-          P.say(a,"じゃーん！",1.1);
-          P.later(.15,function(){if(alive(s,b))P.say(b,"じゃーん！",1.1);});
+          /* おどっている みんなで きめる */
+          s.m.forEach(function(d,i){
+            if(!i){P.say(d,"じゃーん！",1.1,true);return;}
+            P.later(.15*i,function(){if(alive(s,d))P.say(d,"じゃーん！",1.1,true);});
+          });
           next(s);}}
       else if(s.st===2){if(once(s,"faceBye")){faceTo(a,b);faceTo(b,a);}return goodbye(s,b,a,s.tt,1.3);}
     },
@@ -1067,7 +1090,7 @@ function drawMat(g,s){
   }
 }
 /* 見まもる子の ならぶ場所。あそびが はじまったときに 一度だけ きめて、あとは 動かさない */
-function gallery(n,u,near){
+function gallery(n,u,near,fy){
   var A=P.area;if(!A)return null;
   var gap=u*1.55,w=gap*(n-1);
   if(w>S.W-u*3)return null;
@@ -1076,14 +1099,17 @@ function gallery(n,u,near){
      （front＝あそび場に かかってもよい席） */
   var lane=P.sessions[0]&&(P.sessions[0].type==="race"||P.sessions[0].type==="daruma");
   var rows=lane?[[S.bottom-u*.35,1],[S.bottom-u*1.25,1],[A.t-u*1.5,0],[S.top+u*.9,0]]
-               :[[A.b+u*1.7,0],[A.t-u*1.5,0],[S.bottom-u*1.25,1],[S.top+u*.9,1]];
+               :[[A.b+u*1.7,0],[A.t-u*1.5,0],[S.bottom-u*1.25,1],[S.top+u*.9,0]];
+  /* みんなで かこむ あそび（つなひきなど）では、見る子が いる がわを 先に さがす
+     （あそび場の むこうがわに 席を つくると、まわりこめずに ゆれてしまう） */
+  if(!lane&&fy!=null)rows=rows.slice().sort(function(p,q){return Math.abs(p[0]-fy)-Math.abs(q[0]-fy);});
   var lo=u*1.5+w/2,hi=S.W-u*1.5-w/2;
   var mid=clamp((A.l+A.r)/2,lo,hi);
   /* 草原の はしからはしまで さがす（まん中に 案内の文字が あっても 見つかるように） */
   var steps=Math.min(120,Math.ceil((hi-lo)/(u*.5))*2+2);
   for(var i=0;i<rows.length;i++){
-    /* まずは 手前の 特等席だけで さがす（near＝近い席だけ）*/
-    if(near&&!rows[i][1])continue;
+    /* よーいどん・だるまさんがころんだ は、まず 手前の 特等席だけで さがす */
+    if(near&&lane&&!rows[i][1])continue;
     var y=clamp(rows[i][0],S.top+u*.6,S.bottom-u*.15),front=rows[i][1];
     /* まん中から 左右に ずらしながら、ぜんいんが ならべる 場所を さがす */
     for(var step=0;step<=steps;step++){
@@ -1106,7 +1132,7 @@ function spectate(dt){
   var s=P.sessions.filter(function(x){return x.m.length>=4&&WATCHABLE[x.type];})[0];
   var fans=P.animals.filter(function(a){return !a.sess&&!a.leaving&&!a.helping&&!a.chat&&a.age>=1.1;});
   if(!s){
-    P.animals.forEach(function(a){if(a.watch){a.watch=null;a.face=0;a.watchMove=false;a.galI=null;a.galSet=false;a.hold=false;a.rest=rand(.6,2);}});
+    P.animals.forEach(function(a){if(a.watch){a.watch=null;a.face=0;a.watchMove=false;a.galI=null;a.galSet=false;a.hold=false;a.galGave=false;a.seatT=0;a.seatAll=0;a.seatP=null;a.galSide=null;a.rest=rand(.6,2);}});
     return;
   }
   /* あそびが はじまった ときに すぐ、何人 見るかを きめて シートを しく。そのあとは 動かさない */
@@ -1114,8 +1140,9 @@ function spectate(dt){
     var u0=fans.reduce(function(v,a){return Math.max(v,a.u);},P.U);
     var n0=Math.min(Math.max(fans.length,2),8),g=null;
     /* 手前の 特等席を 先に さがし、どうしても なければ うしろの席にする */
+    var fy0=0;fans.forEach(function(a){fy0+=a.y;});fy0/=fans.length;
     for(var pass=1;pass>=0&&!g;pass--)
-      for(var tryN=n0;tryN>=2&&!g;tryN--)g=gallery(tryN,u0,pass);
+      for(var tryN=n0;tryN>=2&&!g;tryN--)g=gallery(tryN,u0,pass,fy0);
     if(g){
       s.gal=g;s.galN=g.n;s.matU=u0;s.seats=[];
       fans.slice().sort(function(p,q){return p.x-q.x;}).forEach(function(a,i){
@@ -1130,6 +1157,7 @@ function spectate(dt){
   /* あとから 見にきた子（あそびから ぬけた子など）にも 席をわりあてる */
   if(s.gal&&s.seats){
     fans.forEach(function(a){
+      if(a.galGave)return;
       if(a.galI!=null&&s.seats.indexOf(a)>=0)return;
       if(s.seats.length<s.gal.n*2){a.galI=s.seats.length;s.seats.push(a);}
       else if(!a.leaving&&P.animals.length>=P.MAX){
@@ -1154,17 +1182,56 @@ function spectate(dt){
     if(G){
       var gi=clamp(a.galI==null?0:a.galI,0,G.n*2-1),col=gi%G.n,row=Math.floor(gi/G.n);
       var sx=G.x0+G.gap*col+(row?G.gap*.5:0),sy=G.y-row*a.u*1.15;
-      if(Math.hypot(a.x-sx,(a.y-sy)*1.3)>a.u*.45){
-        /* シートへ むかう とちゅうに ひとこと */
-        if(!a.watchMove&&P.now-(a.watchSaid==null?-99:a.watchSaid)>12&&Math.random()<.6){
-          a.watchSaid=P.now;P.say(a,pick(WATCH),1.4);
+      var sd=Math.hypot(a.x-sx,(a.y-sy)*1.3);
+      if(sd>a.u*.45){
+        /* ちゃんと すすめているか 見ておく。ふさがれて 進めないまま だと
+           その場で 小きざみに ゆれて 見えるので、あきらめて そこから 見る */
+        if(!a.seatP||Math.hypot(a.x-a.seatP.x,a.y-a.seatP.y)>a.u*.5){a.seatP={x:a.x,y:a.y};a.seatT=0;}
+        else a.seatT=(a.seatT||0)+dt;
+        a.seatAll=(a.seatAll||0)+dt;
+        /* 席が あそび場の 中に なってしまった（歩いて 入れない）／
+           ずっと すすめない／いつまでも つけない ときは、あきらめて その場で 見る */
+        if(P.inArea(sx,sy,a.u,null)||a.seatT>2.5||a.seatAll>7){
+          a.galI=null;a.galGave=true;a.seatT=0;a.seatAll=0;a.seatP=null;a.galSide=null;a.watchMove=false;a.galSet=false;
         }
-        a.watchMove=true;a.galSet=false;a.hold=false;go(a,sx,sy,1.75);return;
+        else{
+          /* シートへ むかう とちゅうに ひとこと */
+          if(!a.watchMove&&P.now-(a.watchSaid==null?-99:a.watchSaid)>12&&Math.random()<.6){
+            a.watchSaid=P.now;P.say(a,pick(WATCH),1.4);
+          }
+          /* 席が あそび場の むこうがわ なら、あそび場の よこを まわって いく
+             （まっすぐ 行こうとして 入れず、その場で ゆれてしまうのを ふせぐ） */
+          var gx2=sx,gy2=sy,A=P.area;
+          if(A){
+            var padA=a.u*1.7,wl=A.l-padA,wr=A.r+padA;
+            if(a.galSide==null){
+              for(var q=1;q<8;q++){
+                var qx=a.x+(sx-a.x)*q/8,qy=a.y+(sy-a.y)*q/8;
+                if(P.inArea(qx,qy,a.u,null)){
+                  a.galSide=(Math.abs(a.x-wl)+Math.abs(sx-wl)<Math.abs(a.x-wr)+Math.abs(sx-wr))?-1:1;break;
+                }
+              }
+            }
+            if(a.galSide!=null){
+              /* あそび場の たてはばを 通りぬけるまでは、きめた がわを まわりつづける */
+              var done=(sy<=A.t&&a.y<A.t-a.u*.2)||(sy>=A.b&&a.y>A.b+a.u*.2)||
+                       (a.x<A.l-a.u*.6&&sx<A.l)||(a.x>A.r+a.u*.6&&sx>A.r);
+              var wx=clamp(a.galSide<0?wl:wr,a.u,S.W-a.u);
+              if(done)a.galSide=null;
+              else if(Math.abs(a.x-wx)>a.u*.5){gx2=wx;gy2=a.y;}
+              else{gx2=wx;gy2=sy;}
+            }
+          }
+          a.watchMove=true;a.galSet=false;a.hold=false;go(a,gx2,gy2,1.75);return;
+        }
       }
+      if(a.galI!=null){
       /* すわったら うごかない（あしも 向きも そのまま）。することは おうえんの ことばだけ */
+      a.seatT=0;a.seatAll=0;a.seatP=null;a.galSide=null;
       if(!a.galSet){a.galSet=true;a.face=cx>a.x?1:-1;a.dir=a.face;}
       a.hold=true;a.moving=false;a.tx=a.x;a.ty=a.y;a.rest=1;a.mult=1;a.z=0;a.vz=0;
       return;
+      }
     }else if(a.keepOut){a.watchMove=true;a.galSet=false;return;}
     /* シートが まだ できていない あいだは、ふだんどおり 歩いていてよい
        （その場で きょろきょろ しない） */
