@@ -55,6 +55,10 @@ P.farSpot=function(a){
 P.later=function(sec,fn){P.queue.push({t:P.now+sec,fn:fn});};
 P.say=function(a,text,dur){
   if(!a||!text)return;
+  /* おなじ ことばが いま ほかの子の ふきだしに 出ているときは、かさねて 出さない
+     （おなじ セリフの ふきだしが 2つ ならんで 見えないように）。口だけ うごかす */
+  var dup=P.bubbles.some(function(b){return b.a!==a&&b.text===text&&P.now-b.born<Math.min(b.dur,1.8);});
+  if(dup){a.talk=.45;return;}
   var same=P.bubbles.some(function(b){return b.a===a&&b.text===text;});
   P.bubbles=P.bubbles.filter(function(b){return b.a!==a;});
   P.bubbles.push({a:a,text:text,born:P.now,dur:dur||1.6,keep:same});

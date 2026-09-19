@@ -96,12 +96,14 @@ function lineUp(s,x,keep){
   });
 }
 /* ならびがぜんぶ、しげみ・池・文字にかぶらない中心をさがす */
-function formation(s,u,posFn){
+/* maxY＝これより 手前には しない（みんなが 見まもる ブルーシートの ばしょを あけておく） */
+function formation(s,u,posFn,maxY){
+  var lim=Math.max(S.top+u,Math.min(maxY==null?S.bottom-u:maxY,S.bottom-u));
   var cx=0,cy=0;s.m.forEach(function(a){cx+=a.x;cy+=a.y;});
-  var near={x:clamp(cx/s.m.length,S.W*.25,S.W*.75),y:clamp(cy/s.m.length,S.top+u,S.bottom-u)};
-  function ok(c){return posFn(c).every(function(p){return S.clear(p.x,p.y,u);});}
+  var near={x:clamp(cx/s.m.length,S.W*.25,S.W*.75),y:clamp(cy/s.m.length,S.top+u,lim)};
+  function ok(c){return c.y<=lim&&posFn(c).every(function(p){return S.clear(p.x,p.y,u);});}
   if(ok(near))return near;
-  return S.safeSpot(u,near,ok)||S.safeSpot(u*.8,near,function(c){return posFn(c).every(function(p){return S.clear(p.x,p.y,u*.8);});})||{x:S.W/2,y:(S.top+S.bottom)/2};
+  return S.safeSpot(u,near,ok)||S.safeSpot(u*.8,near,function(c){return c.y<=lim&&posFn(c).every(function(p){return S.clear(p.x,p.y,u*.8);});})||{x:S.W/2,y:Math.min((S.top+S.bottom)/2,lim)};
 }
 
 /* ---------------- だるまさんがころんだ ---------------- */
@@ -353,7 +355,8 @@ ACT.tug={
     s.gap=half>1?clamp((room-inner)/(half-1),1.5,2):2;
     function base(team,i,c){return c.x+(team==="L"?-1:1)*(inner*u+i*s.gap*u);}
     function pos(c){return s.L.map(function(a,i){return {x:base("L",i,c),y:c.y};}).concat(s.R.map(function(a,i){return {x:base("R",i,c),y:c.y};}));}
-    s.c=formation(s,u,pos);s.base=base;
+    /* つなひきは 見まもる子の ブルーシートの 手前の帯を あけて、すこし おくで する */
+    s.c=formation(s,u,pos,S.bottom-u*3.2);s.base=base;
     s.L.forEach(function(a,i){a.pow=rand(.9,1.1);go(a,base("L",i,s.c),s.c.y,1.2);});
     s.R.forEach(function(a,i){a.pow=rand(.9,1.1);go(a,base("R",i,s.c),s.c.y,1.2);});
     addProp(s,{y:function(){return s.c.y+2;},draw:function(g){
