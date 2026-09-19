@@ -296,6 +296,9 @@ ACT.race={
         });
         /* 「本気！」は 毎回では ない（半分くらいの レース）。出るときは ビリの子だけ */
         s.spurtAt=rand(2.5,5);s.spurted=Math.random()<.45;
+        /* とちゅうの ドラマ：先頭が つかれる／ころぶ */
+        s.tiredAt=rand(1.8,3.4);s.tired=false;
+        s.tripAt=rand(2.2,4.2);s.tripped=Math.random()<.65;   /* true＝ころばない */
         next(s);
       }
       return;
@@ -309,15 +312,30 @@ ACT.race={
         var who=run.slice().sort(function(p2,q2){return (p2.x-s.x0)*dirX-(q2.x-s.x0)*dirX;})[0];
         if(who){who.dash=rand(.9,1.3);P.say(who,pick(["ここからが 本気！","ラストスパート！"]),1.4);P.note(who.x,P.headY(who)-6,"ビューン","#E9A93B");}
       }
-      /* いちばん前の子との 差（ぬかれた子は すこし がんばるので、大きく はなれない） */
-      var lead=-1e9;
-      s.m.forEach(function(a){if(!a.done)lead=Math.max(lead,(a.x-s.x0)*dirX);});
+      /* いちばん前の子と、コースの どのあたりかを 見る */
+      var lead=-1e9,leadA=null;
+      s.m.forEach(function(a){if(!a.done){var pr=(a.x-s.x0)*dirX;if(pr>lead){lead=pr;leadA=a;}}});
+      var total=Math.abs(s.x1-s.x0)||1,frac=lead/total;
+      /* 先頭が つかれて ペースダウン（ぬかれる きっかけ） */
+      if(!s.tired&&s.tt>s.tiredAt&&frac<.62&&leadA){
+        s.tired=true;leadA.slow=rand(1.1,1.6);
+        P.say(leadA,pick(["はあ、つかれた〜","ちょっと ペースダウン…"]),1.4);
+      }
+      /* たまに 先頭が ころぶ */
+      if(!s.tripped&&s.tt>s.tripAt&&frac<.72&&leadA){
+        s.tripped=true;leadA.trip=.8;P.say(leadA,"わっ、ころんじゃった〜",1.4);P.jump(leadA,1.6);
+      }
       s.m.forEach(function(a){
         if(a.done)return;
         a.boost=Math.max(0,(a.boost||0)-dt);
+        a.slow=Math.max(0,(a.slow||0)-dt);
         if(a.trip>0){a.trip-=dt;a.hold=true;a.shake=Math.sin(P.now*40)*a.u*.05;if(a.trip<=0){a.hold=false;a.shake=0;}return;}
-        var chase=1+Math.min(.22,Math.max(0,(lead-(a.x-s.x0)*dirX)/a.u)*.06);
-        go(a,s.x1+dirX*a.u*.6,a.lane,a.spd*chase*(a.boost>0?1.5:1));
+        /* 前半は 大きく はなれない。おわりの ほうは 追いつく力を ゆるめて、
+           1着が はっきり わかる ように 差を つける */
+        var near=frac<.68?1:.04;
+        var chase=1+Math.min(.22,Math.max(0,(lead-(a.x-s.x0)*dirX)/a.u)*.06)*near;
+        var kick=(a===leadA&&frac>=.68)?1.2:1;
+        go(a,s.x1+dirX*a.u*.6,a.lane,a.spd*chase*kick*(a.boost>0?1.5:1)*(a.slow>0?.72:1));
         if((a.x-s.x1)*dirX>-a.u*.06){
           a.done=true;a.hold=true;s.order.push(a);
           var place=s.order.length;
@@ -479,6 +497,7 @@ ACT.tug={
 
 /* ---------------- ふえおに（つかまった子も おにに なる） ---------------- */
 /* ふえおに：おにが まだ とおいときに、広くて ほかの子も いない ばしょを さがす */
+var ONI_SEC=30;   /* ふえおに の じかん */
 function openSpot(r,rs,c){
   var best=null,bs=-1e9;
   for(var i=0;i<14;i++){
@@ -512,6 +531,24 @@ ACT.oni={
     s.count=3.4;
     /* どの子が おに なのか わかるように、あたまの上に しるしを出す */
     addProp(s,{y:1e9,draw:function(g){if(P.sessions.indexOf(s)>=0)s.onis.forEach(function(c){X.oniMark(g,c);});}});
+    /* のこり時間を 草原の上に 出す */
+    addProp(s,{y:1e9,draw:function(g){
+      if(P.sessions.indexOf(s)<0||s.st>1)return;
+      var left=Math.max(0,Math.ceil(ONI_SEC-s.t));
+      var fs=Math.round(clamp(P.U*.55,13,22)),txt="のこり "+left+"びょう";
+      g.save();
+      g.font="700 "+fs+"px 'Zen Maru Gothic',sans-serif";g.textAlign="center";g.textBaseline="middle";
+      var bw=g.measureText(txt).width+fs*1.3,bh=fs*1.8,x=S.W/2,y=S.top+bh*.72,hot=left<=10;
+      g.fillStyle=hot?"rgba(239,107,94,.94)":"rgba(255,255,255,.92)";
+      g.strokeStyle="rgba(58,44,36,.25)";g.lineWidth=1.2;
+      var rx=x-bw/2,ry=y-bh/2,r=bh/2;
+      g.beginPath();
+      g.moveTo(rx+r,ry);g.lineTo(rx+bw-r,ry);g.arc(rx+bw-r,ry+r,r,-PI/2,PI/2);
+      g.lineTo(rx+r,ry+bh);g.arc(rx+r,ry+r,r,PI/2,PI*1.5);g.closePath();
+      g.fill();g.stroke();
+      g.fillStyle=hot?"#FFFFFF":"#123F63";g.fillText(txt,x,y+fs*.05);
+      g.restore();
+    }});
   },
   update:function(s,dt){
     var oni0=s.onis[0];
@@ -642,13 +679,17 @@ ACT.oni={
           P.note(who2.x,P.headY(who2)-6,"ビューン","#E9A93B");
         }
       }
+      /* のこり時間を にげる子が 知らせる */
+      var left2=Math.ceil(ONI_SEC-s.t);
+      if(left2<=10&&s.rs.length&&once(s,"left10")){P.say(pick(s.rs),"のこり 10びょう！",1.5);s.talkT=Math.max(s.talkT,1.6);}
+      if(left2<=5&&s.rs.length&&once(s,"left5")){P.say(pick(s.rs),"あと 5びょう、にげきるぞ〜！",1.5);s.talkT=Math.max(s.talkT,1.6);}
       s.talkT-=dt;
       if(s.talkT<0){
         s.talkT=rand(2,3.2);
         if(Math.random()<.5&&s.rs.length)P.say(pick(s.rs),pick(["にげろ〜","こっちだよ〜","つかまらないぞ〜"]),1.2);
         else P.say(pick(s.onis),pick(["まてまて〜","つかまえるぞ〜","そっちに いった！"]),1.2);
       }
-      if(s.rs.length<=1||s.t>38){
+      if(s.rs.length<=1||s.t>ONI_SEC){
         s.m.forEach(function(a){a.hold=true;a.aim=null;});
         var last=s.rs[0];
         if(last){P.say(last,"さいごまで にげきった〜！",1.6);P.jump(last,4.6);

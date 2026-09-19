@@ -1098,8 +1098,11 @@ function gallery(n,u,near,fy){
      手前が 案内の文字などで ふさがっている ときのために、うしろの席も 用意しておく
      （front＝あそび場に かかってもよい席） */
   var lane=P.sessions[0]&&(P.sessions[0].type==="race"||P.sessions[0].type==="daruma");
-  var rows=lane?[[S.bottom-u*.35,1],[S.bottom-u*1.25,1],[A.t-u*1.5,0],[S.top+u*.9,0]]
-               :[[A.b+u*1.7,0],[A.t-u*1.5,0],[S.bottom-u*1.25,1],[S.top+u*.9,0]];
+  /* 席は かならず あそび場より 手前（下がわ）に つくる。
+     おくに つくると、あそび場が じゃまで ぐるっと まわっても たどりつけないことがある。
+     手前に 場所が ないときは シートは なし（みんな その場で 見る） */
+  var rows=lane?[[S.bottom-u*.35,1],[S.bottom-u*1.25,1]]
+               :[[A.b+u*1.7,0],[S.bottom-u*1.25,1],[S.bottom-u*.35,1]];
   /* みんなで かこむ あそび（つなひきなど）では、見る子が いる がわを 先に さがす
      （あそび場の むこうがわに 席を つくると、まわりこめずに ゆれてしまう） */
   if(!lane&&fy!=null)rows=rows.slice().sort(function(p,q){return Math.abs(p[0]-fy)-Math.abs(q[0]-fy);});
@@ -1136,7 +1139,7 @@ function spectate(dt){
     return;
   }
   /* あそびが はじまった ときに すぐ、何人 見るかを きめて シートを しく。そのあとは 動かさない */
-  if(fans.length&&!s.gal&&(s.galT||0)<P.now){
+  if(fans.length&&!s.gal&&!s.noGal&&(s.galT||0)<P.now){
     var u0=fans.reduce(function(v,a){return Math.max(v,a.u);},P.U);
     var n0=Math.min(Math.max(fans.length,2),8),g=null;
     /* 手前の 特等席を 先に さがし、どうしても なければ うしろの席にする */
@@ -1167,8 +1170,28 @@ function spectate(dt){
     });
     s.galN=s.seats.length;
   }
-  /* 見ている子がいるときだけ、ブルーシートを しく */
-  if(s.gal&&fans.length){
+  /* シートは、だれかが ちゃんと 席に たどりつけた ときだけ しく。
+     だれも 行けない（とおい・あそび場が じゃま）ときは、そもそも 出さない */
+  if(s.gal&&s.seats){
+    var comingN=0,nearN=0;
+    s.seats.forEach(function(a){
+      if(a.galGave||a.galI==null||fans.indexOf(a)<0)return;
+      var gi=clamp(a.galI,0,s.gal.n*2-1),col=gi%s.gal.n,row=Math.floor(gi/s.gal.n);
+      var qx=s.gal.x0+s.gal.gap*col+(row?s.gal.gap*.5:0),qy=s.gal.y-row*a.u*1.15;
+      comingN++;
+      if(Math.hypot(a.x-qx,(a.y-qy)*1.3)<a.u*3)nearN++;
+    });
+    if(nearN)s.matOK=true;
+    /* だれも 向かっていない（みんな あきらめた）ときは、シートを かたづけて さがしなおす */
+    if(!comingN&&!s.matOK){
+      s.gal=null;s.seats=null;s.galN=0;s.galT=P.now+2.5;
+      s.galTries=(s.galTries||0)+1;
+      /* なんど さがしても だれも 行けないときは、シートは なしにする（みんな その場で 見る） */
+      if(s.galTries>=3)s.noGal=true;
+      fans.forEach(function(a){a.galGave=false;a.galI=null;});
+    }
+  }
+  if(s.gal&&s.matOK&&fans.length){
     if(!s.mat){
       s.mat={y:0,draw:function(g){drawMat(g,s);}};
       s.props=s.props||[];s.props.push(s.mat);P.props.push(s.mat);
@@ -1191,7 +1214,10 @@ function spectate(dt){
         a.seatAll=(a.seatAll||0)+dt;
         /* 席が あそび場の 中に なってしまった（歩いて 入れない）／
            ずっと すすめない／いつまでも つけない ときは、あきらめて その場で 見る */
-        if(P.inArea(sx,sy,a.u,null)||a.seatT>2.5||a.seatAll>7){
+        /* 席が あそび場の まん中に なってしまったとき（歩いて 入れない）だけ あきらめる。
+           手前の ふちは すわってよい */
+        var A0=P.area,deep=A0&&sx>A0.l-a.u*.4&&sx<A0.r+a.u*.4&&sy>A0.t-a.u*.4&&sy<A0.b-a.u*.25;
+        if(deep||a.seatT>2.5||a.seatAll>12){
           a.galI=null;a.galGave=true;a.seatT=0;a.seatAll=0;a.seatP=null;a.galSide=null;a.watchMove=false;a.galSet=false;
         }
         else{
@@ -1204,7 +1230,9 @@ function spectate(dt){
           var gx2=sx,gy2=sy,A=P.area;
           if(A){
             var padA=a.u*1.7,wl=A.l-padA,wr=A.r+padA;
-            if(a.galSide==null){
+            /* あそび場が よこいっぱいの ときは まわりこめないので、まっすぐ 行く */
+            if(A.r-A.l>S.W*.72)a.galSide=null;
+            else if(a.galSide==null){
               for(var q=1;q<8;q++){
                 var qx=a.x+(sx-a.x)*q/8,qy=a.y+(sy-a.y)*q/8;
                 if(P.inArea(qx,qy,a.u,null)){
