@@ -226,7 +226,7 @@ function stepAnimal(a,dt){
     if((a.z>0||a.vz>0)&&d>1)move();
   }else if(wants){
     /* あしの ふりは ゆっくりめに。はやく走るときだけ 少しはやく（それでも 上限をつける） */
-    move();a.ph+=dt*(m==="waddle"?6.5:Math.min(speed/a.u,2.4)*2.6);
+    move();a.ph+=dt*(m==="waddle"?5:Math.min(speed/a.u,2.4)*2.6);
   }
   if(!wants&&a.face&&a.face!==a.dir&&P.now-(a.dirT||-9)>.35){a.dir=a.face;a.dirT=P.now;}
   if(a.knock){a.x+=a.knock*dt;a.knock*=Math.pow(.02,dt);if(Math.abs(a.knock)<2)a.knock=0;}
