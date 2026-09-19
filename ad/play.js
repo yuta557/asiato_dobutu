@@ -224,7 +224,10 @@ function stepAnimal(a,dt){
   if(m==="hop"){
     if(wants&&a.z===0&&a.vz===0&&a.land===0)a.vz=a.u*(a.mult>1.2?4:3.4);
     if((a.z>0||a.vz>0)&&d>1)move();
-  }else if(wants){move();a.ph+=dt*(m==="waddle"?9:speed/a.u*4.6);}
+  }else if(wants){
+    /* あしの ふりは ゆっくりめに。はやく走るときだけ 少しはやく（それでも 上限をつける） */
+    move();a.ph+=dt*(m==="waddle"?6.5:Math.min(speed/a.u,2.4)*2.6);
+  }
   if(!wants&&a.face&&a.face!==a.dir&&P.now-(a.dirT||-9)>.35){a.dir=a.face;a.dirT=P.now;}
   if(a.knock){a.x+=a.knock*dt;a.knock*=Math.pow(.02,dt);if(Math.abs(a.knock)<2)a.knock=0;}
   if(a.z>0||a.vz>0){a.vz-=a.u*15*dt;a.z+=a.vz*dt;if(a.z<=0){a.z=0;a.vz=0;a.land=1;}}
