@@ -530,7 +530,12 @@ var ACT={
         return;
       }
       if(B.fly&&a===s.recv){tapLine(a,"ballMiss",["わっ、とれなかった〜","あっ、ボールが〜！"]);if(!s.miss){s.miss=true;P.jump(a,3.8);}return;}
-      if(B.fly){tapLine(a,"ballGo",["とどけ〜！","いいパス〜"]);return;}
+      /* とりそこねる パスのときは「いいパス〜」と 言わない */
+      if(B.fly){
+        if(s.miss)tapLine(a,"ballGoMiss",["あーっ、とれるかな…？","がんばって〜！"]);
+        else tapLine(a,"ballGo",["とどけ〜！","いいパス〜"]);
+        return;
+      }
       if(a===s.h){tapLine(a,"ballKick",["いくよ〜、それっ！","つよく けっちゃえ！"]);if(fx(s,1)){s.wait=0;s.strong=true;}return;}
       tapLine(a,"ballReady",["こっち、こっち〜！","パスして〜！"]);
     },
