@@ -29,6 +29,23 @@ function pair(s,gap){
   go(L,c.x-gap,c.y);go(R,c.x+gap,c.y);s.c=c;s.L=L;s.R=R;
 }
 function bothThere(s){return (arrived(s.m[0])&&arrived(s.m[1]))||s.tt>6;}
+/* おにの しるし：あたまの上に 赤い おにの顔（つのつき） */
+function oniMark(g,a){
+  if(!a||a.hidden||P.animals.indexOf(a)<0)return;
+  var u=a.u*.42,x=a.x,y=P.headY(a)-u*1.5;
+  g.save();
+  g.fillStyle="#F2C230";
+  [-1,1].forEach(function(s2){
+    g.beginPath();g.moveTo(x+s2*u*.5,y-u*.6);g.lineTo(x+s2*u*.18,y-u*1.45);g.lineTo(x+s2*u*.88,y-u*.86);g.closePath();g.fill();
+  });
+  g.fillStyle="#E4463C";g.beginPath();g.arc(x,y,u,0,PI*2);g.fill();
+  g.fillStyle="#2B2A28";g.beginPath();g.arc(x,y-u*.18,u*.99,PI*1.02,PI*1.98);g.fill();
+  g.beginPath();g.arc(x-u*.3,y+u*.1,u*.12,0,PI*2);g.fill();
+  g.beginPath();g.arc(x+u*.3,y+u*.1,u*.12,0,PI*2);g.fill();
+  g.fillStyle="#FBD4B4";g.beginPath();g.arc(x,y+u*.36,u*.3,0,PI,false);g.fill();
+  g.restore();
+}
+X.oniMark=oniMark;
 function weighted(list){var sum=0;list.forEach(function(x){sum+=x[1];});var r=Math.random()*sum;for(var i=0;i<list.length;i++){r-=list[i][1];if(r<=0)return list[i][0];}return list[0][0];}
 /* タップの反応：続けてタップしている間は同じことば */
 function tapLine(a,key,lines,dur){
@@ -158,6 +175,10 @@ var ACT={
       s.c=s.m[1];s.r=s.m[0];s.rs=[s.m[0]];
       /* はじめに おには すこし かぞえて、にげる子に 間をあげる */
       s.pause=rand(2.4,3.2);
+      /* どの子が おに なのか わかるように、あたまの上に しるしを出す */
+      s.props=s.props||[];
+      var mk={y:1e9,draw:function(g){if(P.sessions.indexOf(s)>=0&&!s.endSoon)oniMark(g,s.c);}};
+      s.props.push(mk);P.props.push(mk);
       s.dur=rand(9,12)+s.pause;s.swaps=0;s.stun=0;s.rstun=0;s.minT=s.pause+2;s.runAt=.5;s.talkT=s.pause+2.4;s.joinT=rand(4,6)+s.pause;
       P.say(s.c,pick(["かぞえるから にげて〜","いーち、にーい…"]),1.6);},
     update:function(s,dt){
@@ -956,7 +977,11 @@ X.schedule=function(dt){
       var list=Object.keys(X.GROUP).map(function(k){return [k,X.GROUP[k].weight||1];});
       var type=weighted(list),g=X.GROUP[type],n=Math.min(avail.length,g.max||5);
       /* 横一列にならぶあそびは、ならべる本数までにする（ぎゅうぎゅうにならない） */
-      if(g.lanes&&X.laneRoom)n=Math.min(n,X.laneRoom(P.U));
+      /* 一列にならぶ あそびは、ならべる本数まで（大きい子がいるほど 少なくなる） */
+      if(g.lanes&&X.laneRoom){
+        var bigU=avail.slice(0,n).reduce(function(v,a){return Math.max(v,a.u);},P.U);
+        n=Math.min(n,X.laneRoom(bigU));
+      }
       if(g.even)n-=n%2;
       /* ひと休みが終わっている子から先に入れる */
       avail.sort(function(p,q){return (p.cool>0?1:0)-(q.cool>0?1:0)||Math.random()-.5;});

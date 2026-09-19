@@ -29,7 +29,7 @@ function lanes(n,x0,x1,u){
   }
   /* ならぶ間かくは どうぶつの大きさぶん（u*1.05）はあける。
      せますぎて ならべないときは、しげみをよける条件をはずす（あそび中は しげみの手前に描かれるので かくれない） */
-  var MIN=u*1.05;
+  var MIN=u*1.25;
   function greedy(list){
     if(list.length<n)return null;
     for(var gap=u*1.5;gap>=MIN;gap*=.9){
@@ -45,13 +45,25 @@ function lanes(n,x0,x1,u){
   }
   var res=greedy(cNoBush)||greedy(c);
   if(res)return res;
-  /* どうしても入らないときは、使える高さいっぱいに 等間かくで */
-  var lo2=c.length?c[0]:top,hi2=c.length?c[c.length-1]:bot,e=[];
-  for(var j=0;j<n;j++)e.push(n===1?(lo2+hi2)/2:lo2+(hi2-lo2)*j/(n-1));
-  return e;
+  /* n本とれないときは、とれるだけ かえす（あまった子は 見るがわに まわる） */
+  var src=c.length?c:[top,bot],pick2=[src[0]];
+  for(var k2=1;k2<src.length;k2++)if(src[k2]-pick2[pick2.length-1]>=MIN)pick2.push(src[k2]);
+  return pick2.slice(0,n);
+}
+/* ならべる ぶんだけ 参加する。ならべない子は 見るがわへ */
+function fitLanes(s,list,x0,x1,u){
+  var ys=lanes(list.length,x0,x1,u);
+  while(ys.length<list.length&&list.length>2){
+    var outA=list.pop(),i=s.m.indexOf(outA);
+    if(i>=0)s.m.splice(i,1);
+    outA.sess=null;outA.hold=false;outA.face=0;outA.faceLock=false;outA.mult=1;outA.lane=null;
+    outA.rest=rand(.2,1);outA.cool=rand(3,6);
+  }
+  while(ys.length<list.length)ys.push(ys.length?ys[ys.length-1]+u*1.25:(S.top+S.bottom)/2);
+  return ys;
 }
 /* 何レーンまで ゆったり ならべるか（これより多い人数では あそびを始めない） */
-X.laneRoom=function(u){return Math.max(2,Math.floor((S.bottom-S.top-u*.5)/(u*1.05))+1);};
+X.laneRoom=function(u){return Math.max(2,Math.floor((S.bottom-S.top-u*.5)/(u*1.25))+1);};
 /* ならぶのに 間に合わなかった子。線のすぐ近くなら きっちりそろえ、
    とおくて まにあわない子は あそびから ぬけて 見ているがわにまわる（線より前から スタートしないように） */
 function lineUp(s,x,keep){
@@ -79,9 +91,10 @@ ACT.daruma={
     s.ox=s.side<0?u*1.5:S.W-u*1.5;
     var sx=s.side<0?S.W-u*1.4:u*1.4;
     s.players=s.m.slice(1);s.caught=[];s.round=0;
-    var ys=lanes(s.players.length,s.ox,sx,u);
-    /* いまの 上下の ならび順のまま レーンを わりあてる（すれちがわない） */
+    /* いまの 上下の ならび順のまま レーンを わりあてる（すれちがわない）。
+       ならべない子は 見るがわへ */
     s.players.sort(function(p,q){return p.y-q.y;});
+    var ys=fitLanes(s,s.players,s.ox,sx,u);
     s.oy=ys.reduce(function(v,y){return v+y;},0)/ys.length;
     go(oni,s.ox,s.oy,1.2);
     s.sx=sx;
@@ -204,8 +217,8 @@ ACT.race={
     var u=maxU(s.m),cx=0;s.m.forEach(function(a){cx+=a.x;});cx/=s.m.length;
     /* みんながいる側からスタートして、反対側がゴール */
     s.x0=cx<S.W/2?u*1.3:S.W-u*1.3;s.x1=cx<S.W/2?S.W-u*1.3:u*1.3;
-    var ys=lanes(s.m.length,s.x0,s.x1,u);
     var order=s.m.slice().sort(function(p,q){return p.y-q.y;});
+    var ys=fitLanes(s,order,s.x0,s.x1,u);
     order.forEach(function(a,i){a.lane=ys[i];go(a,s.x0,ys[i],1.5);});
     s.order=[];
     var gx=s.x1,top=Math.min.apply(null,ys)-u*.4,bot=Math.max.apply(null,ys)+u*.4;
@@ -391,6 +404,8 @@ ACT.oni={
     s.rs.forEach(function(r){var q=P.roomySpot(r);go(r,q.x,q.y,1.5);});
     P.say(oni,"わたしが おにね！ かぞえるよ〜",1.6);
     s.count=3.4;
+    /* どの子が おに なのか わかるように、あたまの上に しるしを出す */
+    addProp(s,{y:1e9,draw:function(g){if(P.sessions.indexOf(s)>=0)s.onis.forEach(function(c){X.oniMark(g,c);});}});
   },
   update:function(s,dt){
     var oni0=s.onis[0];
@@ -409,16 +424,50 @@ ACT.oni={
       return;
     }
     if(s.st===1){
-      /* おには いちばん近い子を おいかける。つかまった子も おにに なる */
+      /* おには できるだけ ちがう子を おいかける（だんごに ならないように） */
+      if(!s.aimT||P.now>s.aimT||s.onis.some(function(c){return !c.aim||s.rs.indexOf(c.aim)<0;})){
+        s.aimT=P.now+rand(1.4,2.4);
+        var free=s.rs.slice();
+        s.onis.slice().sort(function(p,q){
+          var dp=Math.min.apply(null,s.rs.map(function(r){return AD.dist(p,r);}).concat([1e9]));
+          var dq=Math.min.apply(null,s.rs.map(function(r){return AD.dist(q,r);}).concat([1e9]));
+          return dp-dq;
+        }).forEach(function(c){
+          var pool=free.length?free:s.rs;
+          var t=pool.slice().sort(function(p,q){return AD.dist(c,p)-AD.dist(c,q);})[0];
+          c.aim=t||null;
+          var i=free.indexOf(t);if(i>=0)free.splice(i,1);
+        });
+      }
+      /* おには 自分の あいてを おいかける。つかまった子も おにに なる */
       s.onis.forEach(function(c){
         c.hold=(c.freeze||0)>0;c.freeze=Math.max(0,(c.freeze||0)-dt);
         if(c.hold)return;
-        if(!c.aim||s.rs.indexOf(c.aim)<0||P.now>(c.aimT||0)){
-          var near=s.rs.slice().sort(function(p,q){return AD.dist(c,p)-AD.dist(c,q);})[0];
-          if(near&&near!==c.aim){c.aim=near;c.aimT=P.now+rand(2.5,4);}
-          else if(near)c.aimT=P.now+rand(2.5,4);
+        /* わりあては 下でまとめて きめる */
+        var t=c.aim;
+        if(t){
+          c.face=0;
+          /* おに同士が かたまらないよう、ほかの おにから はなれる ぶんを 足す */
+          var px=0,py=0;
+          s.onis.forEach(function(o){
+            if(o===c)return;
+            var ox=c.x-o.x,oy=(c.y-o.y)*1.4,od=Math.hypot(ox,oy)||1,R=(c.u+o.u)*1.5;
+            if(od<R){px+=ox/od*(R-od)*.9;py+=oy/od*(R-od)*.45;}
+          });
+          /* おなじ子を おいかける ときは、ちがう むきから まわりこむ */
+          var same=s.onis.filter(function(o){return o.aim===t;}),k=same.indexOf(c),gx=t.x,gy=t.y;
+          if(same.length>1){
+            var an=Math.atan2(c.y-t.y,c.x-t.x)+(k-(same.length-1)/2)*.85;
+            gx=t.x+Math.cos(an)*t.u*1.1;gy=t.y+Math.sin(an)*t.u*.6;
+          }
+          /* すぐ となりに ほかの おにが いるときは、まず はなれる */
+          var nearO=null,nd=1e9;
+          s.onis.forEach(function(o){if(o===c)return;var d2=AD.dist(c,o);if(d2<nd){nd=d2;nearO=o;}});
+          if(nearO&&nd<(c.u+nearO.u)*.95){
+            var ax2=c.x-nearO.x,ay2=(c.y-nearO.y)*1.3,al=Math.hypot(ax2,ay2)||1;
+            go(c,c.x+ax2/al*c.u*2.2,c.y+ay2/al*c.u*1.1,1.5);
+          }else go(c,gx+px,gy+py,1.45);
         }
-        var t=c.aim;if(t){c.face=0;go(c,t.x,t.y,1.45);}
         /* おいかけている子だけでなく、すぐそばに 来た子は だれでも タッチ
            （体が かさなるほど 近づいたら、まだ はやくても タッチしたことにする） */
         s.rs.slice().forEach(function(r){
@@ -477,6 +526,7 @@ ACT.oni={
 function catchIt(s,c,t){
   var i=s.rs.indexOf(t);if(i<0)return;
   s.rs.splice(i,1);s.onis.push(t);
+  s.aimT=0;                       /* つかまえたら すぐ おいかける あいてを 決めなおす */
   t.freeze=1.2;t.hold=true;t.aim=null;t.fleeP=null;
   faceTo(c,t);P.say(c,"タッチ！",1.1);P.jump(c,3.4);
   P.later(.5,function(){if(alive(s,t))P.say(t,pick(["つかまった〜、おにに なっちゃった","いっしょに おにだ〜"]),1.5);});

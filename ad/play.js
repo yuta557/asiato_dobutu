@@ -116,6 +116,8 @@ function headAt(a,y){return y-a.u*(a.sp.top||TOP[a.sp.key]||(a.sp.kind==="hand"?
 function stackBad(a,ax,ay,b){
   if(b===a||b.hidden||b.leaving||a.hidden||a.leaving)return -1;
   if((a.scatter||0)>0||(b.scatter||0)>0)return -1;
+  /* 一列にならぶ あそびの なかまどうしは、ならびを くずさない */
+  if(a.sess&&a.sess===b.sess&&(a.sess.type==="race"||a.sess.type==="daruma"||a.sess.type==="tug"))return -1;
   var dx=Math.abs(ax-b.x),dy=Math.abs(ay-b.y),near=(a.u+b.u)*.38;
   if(dy<=near)return ((a.u+b.u)-1.2*Math.min(a.u,b.u))-dx;
   var backIsA=ay<b.y,bu=backIsA?a.u:b.u;
@@ -127,7 +129,10 @@ function stackBad(a,ax,ay,b){
 function blockedAt(a,x,y){
   var L=P.animals,worst=null,wv=0;
   for(var i=0;i<L.length;i++){
-    var b=L[i],nv=stackBad(a,x,y,b);
+    var b=L[i];
+    /* あそんでいる子は、あそんでいない子に 道を ふさがれない（外の子が よける） */
+    if(a.sess&&!b.sess)continue;
+    var nv=stackBad(a,x,y,b);
     if(nv<=0)continue;
     var cv=stackBad(a,a.x,a.y,b);
     if(nv<=cv+.01)continue;                 /* もう かさなっている ぶんには 動ける */
@@ -135,8 +140,16 @@ function blockedAt(a,x,y){
   }
   return worst;
 }
-/* 池の上は 歩かない（入ってしまっているときは 出られるように、入る一歩だけ とめる） */
-function pondBlock(a,x,y){return S.inPond(x,y,1)&&!S.inPond(a.x,a.y,1);}
+/* 池の上は 歩かない（入ってしまっているときは 出られるように、入る一歩だけ とめる）
+   ※ S.inPond は まわりの あきも 入るので、ここでは 水そのものの かたちを つかう */
+function inWater(x,y,k){
+  var p=S.pond;if(!p)return false;k=k||1;
+  return Math.pow((x-p.x)/(p.rx*k),2)+Math.pow((y-p.y)/(p.ry*k),2)<1;
+}
+P.inWater=inWater;
+/* ふだんの おさんぽでは 水の上を 歩かない。
+   あそんでいる さいちゅうは、どうしても 通るときは 通る（そのかわり ぱしゃぱしゃ する） */
+function pondBlock(a,x,y){return !a.sess&&inWater(x,y,1.04)&&!inWater(a.x,a.y,1.04);}
 function canStep(a,x,y){return !blockedAt(a,x,y)&&!pondBlock(a,x,y);}
 /* 前にほかの子がいたら、横によけながら進む（同じあそびの なかまどうしは よけない） */
 function avoid(a,ux,uy){
@@ -247,7 +260,7 @@ function stepAnimal(a,dt){
   }
   /* 池の中に いるときは、あそび中でも いちばん近い きしへ 上がる。
      みんな おなじ場所を めざすと つまるので、すこしずつ ずらす */
-  if(!a.leaving&&S.inPond(a.x,a.y,1)){
+  if(!a.leaving&&!a.sess&&inWater(a.x,a.y,1.04)){
     if(!a.bank||(a.bankT||0)<P.now){
       var bk=S.pondSpot(a.x),out2=bk.x>S.pond.x?1:-1;
       a.bank={x:clamp(bk.x+out2*a.u*(.8+Math.random()*.8),a.u,S.W-a.u),y:clamp(bk.y+rand(-1.1,1.1)*a.u,S.top,S.bottom)};
@@ -281,7 +294,7 @@ function stepAnimal(a,dt){
     if(nx!==a.x||ny!==a.y)a.stuckT=0;
     a.x=nx;a.y=ny;
     /* もし 池の中に いるときは ぱしゃぱしゃ する */
-    if(S.inPond(a.x,a.y,1)&&a.z<=0){
+    if(inWater(a.x,a.y,1)&&a.z<=0){
       a.wet=Math.max(a.wet||0,.4);
       a.splashT=(a.splashT||0)-dt;
       if(a.splashT<=0){
@@ -289,7 +302,11 @@ function stepAnimal(a,dt){
         P.note(a.x,a.y-a.u*.25,"ぱしゃ","#4A92C6");
         for(var sp2=0;sp2<7;sp2++)P.sparks.push({x:a.x,y:a.y,a:-PI*(.15+.7*sp2/6),born:P.now,col:2,u:a.u*.8});
       }
-    }
+      /* 入ったときに ひとこと（おなじ子は しばらく 言わない） */
+      if(!a.inWet){a.inWet=true;
+        if(P.now-(a.wetT==null?-99:a.wetT)>7){a.wetT=P.now;P.say(a,AD.pick(["みずに 入っちゃった〜","つめたーい！","ばしゃばしゃ！"]),1.4);}
+      }
+    }else a.inWet=false;
     /* つなひきのように、うしろに下がっても向きを変えない */
     if(a.faceLock){a.dir=a.face||a.dir;return;}
     /* 向きは ならした よこの うごきで きめる。
@@ -297,7 +314,8 @@ function stepAnimal(a,dt){
     a.vxs=(a.vxs||0)*.88+v.x*.12;
     if((a.vxs>0?1:-1)!==a.dir&&Math.abs(a.vxs)>.34&&P.now-(a.dirT||-9)>.8){a.dir=a.vxs>0?1:-1;a.dirT=P.now;}}
   if(m==="hop"){
-    if(wants&&a.z===0&&a.vz===0&&a.land===0)a.vz=a.u*(a.mult>1.2?4:3.4);
+    /* 進めないとき（前に だれかいる・水ぎわ など）は、その場で ぴょんぴょん しない */
+    if(wants&&a.z===0&&a.vz===0&&a.land===0&&!((a.stuckT||0)>.2))a.vz=a.u*(a.mult>1.2?4:3.4);
     if((a.z>0||a.vz>0)&&d>1)move();
   }else if(wants){
     /* あしの ふりは ゆっくりめに。はやく走るときだけ 少しはやく（それでも 上限をつける） */
