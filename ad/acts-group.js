@@ -247,13 +247,21 @@ ACT.race={
       if(s.tt>1.5&&once(s,"c2"))P.say(caller,"よーい…",.9);
       if(s.tt>2.5&&once(s,"c3")){
         P.say(caller,"どん！",.9);
-        /* 走る速さは どうぶつの あるきかたで ちがうので、みんなが ゴールできるように そろえる */
-        s.m.forEach(function(a){a.hold=false;a.spd=(a.sp.motion==="waddle"?2.4:a.sp.motion==="walk"?1.9:1.5)*rand(.95,1.12);});
+        /* どうぶつによる はやさの ちがいは なくし、その回の「ちから」だけで きまる */
+        s.m.forEach(function(a){a.hold=false;a.even=rand(.92,1.12);a.spd=1.9;});
+        s.spurtAt=rand(2.5,5);s.spurted=false;
         next(s);
       }
       return;
     }
     if(s.st===2){
+      /* とちゅうから 本気を出す子が いる */
+      if(!s.spurted&&s.tt>s.spurtAt){
+        s.spurted=true;
+        var run=s.m.filter(function(a){return !a.done;});
+        var who=pick(run);
+        if(who){who.burst=rand(2.5,4);P.say(who,pick(["ここからが 本気！","ラストスパート！"]),1.4);P.note(who.x,P.headY(who)-6,"ビューン","#E9A93B");}
+      }
       s.m.forEach(function(a){
         if(a.done)return;
         a.boost=Math.max(0,(a.boost||0)-dt);
@@ -400,6 +408,9 @@ ACT.oni={
   init:function(s){
     var oni=s.m[0];
     s.onis=[oni];s.rs=s.m.slice(1);
+    /* どうぶつごとの はやさの ちがいは なくして、その回の「ちから」で きまる */
+    s.m.forEach(function(a){a.even=rand(.92,1.1);});
+    s.spurtT=rand(6,10);
     oni.hold=true;oni.sleep=true;
     s.rs.forEach(function(r){var q=P.roomySpot(r);go(r,q.x,q.y,1.5);});
     P.say(oni,"わたしが おにね！ かぞえるよ〜",1.6);
@@ -488,6 +499,18 @@ ACT.oni={
         }
         if(r.fleeP)go(r,r.fleeP.x,r.fleeP.y,1.45);
       });
+      /* ときどき だれかが きゅうに 本気を出す */
+      s.spurtT-=dt;
+      if(s.spurtT<=0){
+        s.spurtT=rand(7,12);
+        var pool=(Math.random()<.5?s.rs:s.onis).filter(function(a){return !(a.freeze>0);});
+        var who2=pick(pool);
+        if(who2){
+          who2.burst=rand(2.4,3.6);
+          P.say(who2,s.rs.indexOf(who2)>=0?pick(["本気で にげる〜！","まだ つかまらないよ！"]):pick(["ここからが 本気！","スピード アップ！"]),1.4);
+          P.note(who2.x,P.headY(who2)-6,"ビューン","#E9A93B");
+        }
+      }
       s.talkT-=dt;
       if(s.talkT<0){
         s.talkT=rand(2,3.2);

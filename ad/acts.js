@@ -175,6 +175,9 @@ var ACT={
       s.c=s.m[1];s.r=s.m[0];s.rs=[s.m[0]];
       /* はじめに おには すこし かぞえて、にげる子に 間をあげる */
       s.pause=rand(2.4,3.2);
+      /* どうぶつごとの はやさの ちがいは なくして、その回の「ちから」で きまる */
+      s.m.forEach(function(a){a.even=rand(.92,1.1);});
+      s.spurtAt=s.pause+rand(4,7);
       /* どの子が おに なのか わかるように、あたまの上に しるしを出す */
       s.props=s.props||[];
       var mk={y:1e9,draw:function(g){if(P.sessions.indexOf(s)>=0&&!s.endSoon)oniMark(g,s.c);}};
@@ -205,6 +208,16 @@ var ACT={
       if(counting){s.pause-=dt;if(s.pause<=0){counting=false;P.say(c,"いくぞ〜！",1.1);}}
       c.hold=counting||s.stun>0;c.sleep=counting;r.hold=s.rstun>0;
       if(s.tt>s.runAt&&once(s,"run"))P.say(r,"にげろ〜",1.3);
+      /* ---- とちゅうで きゅうに 本気を出す ---- */
+      if(!s.spurted&&s.t>s.spurtAt&&!counting){
+        s.spurted=true;
+        var who=Math.random()<.5?c:r;
+        who.burst=rand(2.6,4);
+        P.say(who,who===c?pick(["ここからが 本気！","スピード アップ！"]):pick(["まだまだ〜！","本気で にげるぞ〜"]),1.4);
+        P.note(who.x,P.headY(who)-6,"ビューン","#E9A93B");
+        var o3=who===c?r:c;
+        P.later(.7,function(){if(alive(s,o3))P.say(o3,pick(["えっ、はやい！","まけないぞ〜！"]),1.3);});
+      }
       /* ---- とちゅうから 入ってくる子 ---- */
       if(!s.join&&!s.joined&&!s.noJoin&&!counting&&s.m.length<3&&s.t>s.joinT){
         /* 入ってくるのは たまに（3回に1回くらい）。1回きめたら もう さそわない */
@@ -354,8 +367,16 @@ var ACT={
       if(s.fetch&&s.fetch.race){
         var R=s.fetch;R.t+=dt;
         if(!R.got){
-          s.m.forEach(function(a){if(!alive(s,a))return;a.hold=false;go(a,B.x-(B.x>a.x?1:-1)*a.u*.55,B.y,1.5);});
-          var win=s.m.filter(function(a){return alive(s,a)&&Math.hypot(a.x-B.x,a.y-B.y)<a.u*.75;})[0];
+          /* めいめい ちがう むきから ボールへ（ぶつかって 止まらないように） */
+          s.m.forEach(function(a){
+            if(!alive(s,a))return;
+            a.hold=false;
+            var vx=a.x-B.x,vy=(a.y-B.y)||.01,vd=Math.hypot(vx,vy)||1;
+            go(a,B.x+vx/vd*a.u*.5,B.y+vy/vd*a.u*.3,1.5);
+          });
+          /* さきに ついた子（いちばん 近い子）が とる */
+          var reach=s.m.filter(function(a){return alive(s,a)&&Math.hypot(a.x-B.x,a.y-B.y)<a.u*.85;});
+          var win=reach.sort(function(p,q){return Math.hypot(p.x-B.x,p.y-B.y)/p.u-Math.hypot(q.x-B.x,q.y-B.y)/q.u;})[0];
           if(win||R.t>8){
             R.got=true;R.t=0;R.a=win||s.m.filter(function(a){return alive(s,a);})[0];
             R.a.hold=true;R.a.face=B.x>R.a.x?1:-1;R.a.dir=R.a.face;
@@ -417,7 +438,8 @@ var ACT={
         else if(!strong&&Math.random()<.6)P.say(h,pick(n>2?["つぎ、"+rc.sp.name+"！","それっ","パス！"]:["それっ","パス！","いくよ〜","えいっ"]),1);
         B.x0=B.x;B.y0=B.y;B.x1=rc.x+rc.dir*rc.u*.55;B.y1=rc.y;B.f=0;B.dur=strong?1.15:.85;B.h=P.U*(strong?2.6:1.4);B.fly=true;s.recv=rc;
         /* ときどき とりそこねて、ボールが ころがっていく */
-        if(!s.miss&&s.kicks>1&&Math.random()<.18){s.miss=true;P.later(B.dur*.9,function(){if(alive(s,rc))P.say(rc,pick(["わっ、とれなかった〜","あっ、ボールが〜！"]),1.2);});}
+        /* ボールを とりそこねるのは、2あそびに 1回くらい */
+        if(!s.miss&&s.kicks>1&&Math.random()<.06){s.miss=true;P.later(B.dur*.9,function(){if(alive(s,rc))P.say(rc,pick(["わっ、とれなかった〜","あっ、ボールが〜！"]),1.2);});}
         B.onLand=function(){
           if(!alive(s,rc))return;
           if(s.miss){s.miss=false;roll(s,rc,true);return;}
@@ -837,6 +859,7 @@ X.end=function(s){
   if(X.GROUP&&X.GROUP[s.type])bigCool=rand(12,16);
   s.m.forEach(function(a){if(a.sess!==s)return;a.afterPlay={type:s.type,t:P.now};a.sess=null;a.mult=1;a.face=0;a.hold=false;a.sleep=false;a.hidden=false;a.nod=0;a.shake=0;a.lag=0;a.catchT=0;
     a.faceLock=false;a.caught=false;a.wet=0;a.done=false;a.trip=0;a.boost=0;a.weak=0;a.wob=0;a.dash=0;
+    a.even=null;a.burst=0;a.aim=null;
     a.rest=rand(1.5,3);a.cool=rand(5,9);a.tx=a.x;a.ty=a.y;});
   if(s.ball){var k=P.balls.indexOf(s.ball);if(k>=0)P.balls.splice(k,1);}
   if(s.fetch&&s.fetch.by&&s.fetch.a){s.fetch.a.helping=null;s.fetch.a.hold=false;s.fetch.a.face=0;s.fetch.a.rest=1;}
