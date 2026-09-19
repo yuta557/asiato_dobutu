@@ -12,7 +12,8 @@ function afx(a,cool){if(P.now-(a.gfxT==null?-99:a.gfxT)>cool){a.gfxT=P.now;retur
 function addProp(s,pr){s.props=s.props||[];s.props.push(pr);P.props.push(pr);}
 /* 横いっぱいに走る・ならぶための高さを n こ えらぶ（池と案内の文字をさける） */
 function lanes(n,x0,x1,u){
-  var top=S.top+u*.3,bot=S.bottom-u*.2,c=[],cNoBush=[];
+  /* いちばん手前は 見ている子が ならぶ場所として あけておく */
+  var top=S.top+u*.3,bot=S.bottom-u*1.5,c=[],cNoBush=[];
   for(var i=0;i<=28;i++){
     var y=top+(bot-top)*i/28;if(!S.laneOK(y,x0,x1,u))continue;
     c.push(y);
@@ -376,9 +377,105 @@ ACT.tug={
   }
 };
 
+/* ---------------- ふえおに（つかまった子も おにに なる） ---------------- */
+ACT.oni={
+  init:function(s){
+    var oni=s.m[0];
+    s.onis=[oni];s.rs=s.m.slice(1);
+    oni.hold=true;oni.sleep=true;
+    s.rs.forEach(function(r){var q=P.roomySpot(r);go(r,q.x,q.y,1.5);});
+    P.say(oni,"わたしが おにね！ かぞえるよ〜",1.6);
+    s.count=3.4;
+  },
+  update:function(s,dt){
+    var oni0=s.onis[0];
+    s.rs=s.rs.filter(function(a){return alive(s,a);});
+    s.onis=s.onis.filter(function(a){return alive(s,a);});
+    if(!s.onis.length||!s.rs.length&&s.st<2){if(!s.onis.length)return true;}
+    if(s.st===0){
+      s.count-=dt;
+      if(s.count<2.2&&once(s,"c1"))P.say(oni0,"いーち、にーい…",1.4);
+      if(s.count<=0){
+        oni0.sleep=false;oni0.hold=false;oni0.face=0;
+        P.say(oni0,"いくぞ〜！",1.2);
+        var r0=pick(s.rs);if(r0)P.later(.4,function(){if(alive(s,r0))P.say(r0,"にげろ〜！",1.3);});
+        s.talkT=2.5;next(s);
+      }
+      return;
+    }
+    if(s.st===1){
+      /* おには いちばん近い子を おいかける。つかまった子も おにに なる */
+      s.onis.forEach(function(c){
+        c.hold=(c.freeze||0)>0;c.freeze=Math.max(0,(c.freeze||0)-dt);
+        if(c.hold)return;
+        if(!c.aim||s.rs.indexOf(c.aim)<0||P.now>(c.aimT||0)){
+          var near=s.rs.slice().sort(function(p,q){return AD.dist(c,p)-AD.dist(c,q);})[0];
+          if(near&&near!==c.aim){c.aim=near;c.aimT=P.now+rand(2.5,4);}
+          else if(near)c.aimT=P.now+rand(2.5,4);
+        }
+        var t=c.aim;if(!t)return;
+        c.face=0;go(c,t.x,t.y,1.45);
+        if(Math.hypot(c.x-t.x,(c.y-t.y)*1.5)<(c.u+t.u)*.5&&s.tt>1.2)catchIt(s,c,t);
+      });
+      /* にげる子は いちばん近い おにから はなれる */
+      s.rs.forEach(function(r){
+        var c=s.onis.slice().sort(function(p,q){return AD.dist(r,p)-AD.dist(r,q);})[0];
+        if(!c)return;
+        r.hold=false;r.face=0;
+        r.fleeT=(r.fleeT||0)-dt;
+        var G=r.fleeP;
+        if(!G||r.fleeT<=0||Math.hypot(G.x-r.x,G.y-r.y)<r.u*.6||!S.clear(G.x,G.y,r.u)||
+           Math.hypot(G.x-c.x,G.y-c.y)<Math.hypot(G.x-r.x,G.y-r.y)*.9){
+          r.fleeP=X.fleeFrom(r,c)||r.fleeP;r.fleeT=rand(.9,1.4);
+        }
+        if(r.fleeP)go(r,r.fleeP.x,r.fleeP.y,1.45);
+      });
+      s.talkT-=dt;
+      if(s.talkT<0){
+        s.talkT=rand(2,3.2);
+        if(Math.random()<.5&&s.rs.length)P.say(pick(s.rs),pick(["にげろ〜","こっちだよ〜","つかまらないぞ〜"]),1.2);
+        else P.say(pick(s.onis),pick(["まてまて〜","つかまえるぞ〜","そっちに いった！"]),1.2);
+      }
+      if(s.rs.length<=1||s.t>38){
+        s.m.forEach(function(a){a.hold=true;a.aim=null;});
+        var last=s.rs[0];
+        if(last){P.say(last,"さいごまで にげきった〜！",1.6);P.jump(last,4.6);
+          P.later(.7,function(){if(alive(s,oni0))P.say(oni0,"つよいなあ〜",1.3);});}
+        else{P.say(oni0,"みんな つかまえた！",1.5);s.onis.forEach(function(c){P.jump(c,3.4);});}
+        s.win=last;next(s);
+      }
+      return;
+    }
+    if(s.st===2){
+      if(s.tt>1.4&&once(s,"face"))s.m.forEach(function(a){a.hold=false;a.rest=rand(.3,1);});
+      return goodbye(s,s.win||oni0,s.win?oni0:(s.rs[0]||s.m[1]),s.tt,2.2);
+    }
+  },
+  tap:function(s,a){
+    if(s.st===0){tapLine(a,"oni0",["ふえおに するよ〜","どこに にげよう…"]);return;}
+    if(s.st===2){tapLine(a,"oniEnd",s.win===a?["にげきった〜！","はやいでしょ？"]:["いっぱい はしった〜","つぎは つかまらないぞ"]);return;}
+    if(s.onis.indexOf(a)>=0){
+      tapLine(a,"oniC",["まてまて〜！","じゃましないで〜","つかまえるぞ〜"]);
+      if(fx(s,1.4)){a.freeze=.9;P.jump(a,3);}
+      return;
+    }
+    tapLine(a,"oniR",["わっ、びっくりした！","あぶない、あぶない！","いまのうち〜"]);
+    P.jump(a,3.4);
+  }
+};
+
+/* ふえおに：つかまえた子を おにに する */
+function catchIt(s,c,t){
+  var i=s.rs.indexOf(t);if(i<0)return;
+  s.rs.splice(i,1);s.onis.push(t);
+  t.freeze=1.2;t.hold=true;t.aim=null;t.fleeP=null;
+  faceTo(c,t);P.say(c,"タッチ！",1.1);P.jump(c,3.4);
+  P.later(.5,function(){if(alive(s,t))P.say(t,pick(["つかまった〜、おにに なっちゃった","いっしょに おにだ〜"]),1.5);});
+}
 /* みんなであそぶ あそびの一覧（4ひき以上いるときに えらばれる） */
-X.GROUP={daruma:{max:6,weight:1.2,lanes:true},race:{max:6,weight:1.2,lanes:true},tug:{max:6,weight:1,even:true}};
+X.GROUP={daruma:{max:7,weight:1.2,lanes:true},race:{max:7,weight:1.2,lanes:true},tug:{max:8,weight:1,even:true},oni:{max:8,weight:1.4}};
 X.AFTER.daruma=["そーっと うごくの、むずかしい","ころんだ！って ドキッとした","つぎは おにを やりたいな"];
 X.AFTER.race=["いっぱい はしった〜","つぎは もっと はやく はしるぞ","あしが まだ はしってる"];
 X.AFTER.tug=["うでが つかれた〜","よいしょ、よいしょ、したね","つぎは ぜったい かつぞ"];
+X.AFTER.oni=["おにが どんどん ふえた〜","にげるの、どきどきした","つぎは さいごまで にげきるぞ"];
 })();

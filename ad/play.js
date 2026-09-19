@@ -193,10 +193,20 @@ function stepAnimal(a,dt){
   if(a.age<1.1)return;
   if(!a.sess&&!a.leaving&&!a.helping){
     /* あそんでいる場所には入らない。中にいたら すぐ外へ出る。行き先が中なら えらびなおす */
-    if(P.area&&P.inArea(a.x,a.y,a.u,a.sess)){
-      if(!a.keepOut){a.keepOut=true;var e=stepOut(a);a.tx=e.x;a.ty=e.y;a.rest=0;a.mult=1.25;}
+    /* 見ている子が ならんでいる ところは そのままにする */
+    if(a.galSet)a.keepOut=false;
+    else if(P.area&&P.inArea(a.x,a.y,a.u,a.sess)){
+      /* みんなであそぶときは あそび場が とても広くなることがある。
+         いつまでも 外へ出られないと ずっと歩きつづけてしまうので、しばらくしたら あきらめて その場で見る */
+      if(a.outGave>0)a.outGave-=dt;
+      else if(!a.keepOut){a.keepOut=true;a.outT=0;var e=stepOut(a);a.tx=e.x;a.ty=e.y;a.rest=0;a.mult=1.25;}
+      else{
+        a.outT=(a.outT||0)+dt;
+        if(a.outT>3.5){a.keepOut=false;a.mult=1;a.outGave=7;a.tx=a.x;a.ty=a.y;a.rest=rand(1,2);}
+      }
     }else{
       if(a.keepOut){a.keepOut=false;a.mult=1;a.rest=rand(.3,1.2);}
+      a.outT=0;a.outGave=0;
       if(P.inArea(a.tx,a.ty,a.u,a.sess)){var q=P.roomySpot(a);a.tx=q.x;a.ty=q.y;}
     }
     if(a.rest>0)a.rest-=dt;
