@@ -108,16 +108,44 @@ function stepOut(a){
   });
   return best||P.roomySpot(a);
 }
+/* ---- かさなりの きまり ----
+   ・よこ（おなじ おくゆき）で 体の6わり いじょう かさなるのは だめ
+   ・手前と おくの かさなりは よい。ただし うしろの子の 顔が かくれるのは だめ
+   どれくらい やぶっているかを かえす（0いか なら だいじょうぶ） */
+function headAt(a,y){return y-a.u*(a.sp.top||TOP[a.sp.key]||(a.sp.kind==="hand"?1.95:2.15));}
+function stackBad(a,ax,ay,b){
+  if(b===a||b.hidden||b.leaving||a.hidden||a.leaving)return -1;
+  if((a.scatter||0)>0||(b.scatter||0)>0)return -1;
+  var dx=Math.abs(ax-b.x),dy=Math.abs(ay-b.y),near=(a.u+b.u)*.38;
+  if(dy<=near)return ((a.u+b.u)-1.2*Math.min(a.u,b.u))-dx;
+  var backIsA=ay<b.y,bu=backIsA?a.u:b.u;
+  var hb=backIsA?headAt(a,ay):headAt(b,b.y),hf=backIsA?headAt(b,b.y):headAt(a,ay);
+  if(hb+bu*.62<=hf)return -1;               /* うしろの子の 顔が 見えている */
+  return (a.u+b.u)*.5-dx;
+}
+/* その場所へ 動いたら かさなってしまうか（いま より わるくなるときだけ とめる） */
+function blockedAt(a,x,y){
+  var L=P.animals,worst=null,wv=0;
+  for(var i=0;i<L.length;i++){
+    var b=L[i],nv=stackBad(a,x,y,b);
+    if(nv<=0)continue;
+    var cv=stackBad(a,a.x,a.y,b);
+    if(nv<=cv+.01)continue;                 /* もう かさなっている ぶんには 動ける */
+    if(nv>wv){wv=nv;worst=b;}
+  }
+  return worst;
+}
 /* 前にほかの子がいたら、横によけながら進む（同じあそびの なかまどうしは よけない） */
 function avoid(a,ux,uy){
   var sx=0,sy=0;
   if(a.hidden)return {x:ux,y:uy};
   P.animals.forEach(function(b){
-    if(b===a||b.leaving||b.hidden||(a.sess&&a.sess===b.sess))return;
-    var ex=b.x-a.x,ey=(b.y-a.y)*1.6,dist=Math.hypot(ex,ey),R=(a.u+b.u)*1.05;
+    if(b===a||b.leaving||b.hidden)return;
+    var team=a.sess&&a.sess===b.sess;
+    var ex=b.x-a.x,ey=(b.y-a.y)*1.6,dist=Math.hypot(ex,ey),R=(a.u+b.u)*(team?.8:1.05);
     if(dist>R||dist<.01)return;
     var ahead=(ex*ux+ey*uy)/dist;if(ahead<.05)return;
-    var side=(ux*ey-uy*ex)>0?-1:1,w=(1-dist/R)*ahead*1.8;
+    var side=(ux*ey-uy*ex)>0?-1:1,w=(1-dist/R)*ahead*(team?.7:1.8);
     sx+=-uy*side*w-ex/dist*w*.35;sy+=ux*side*w-ey/dist*w*.35;
   });
   /* あそび場の手前では、中に入らないよう まわりこむ */
@@ -218,7 +246,23 @@ function stepAnimal(a,dt){
   var m=a.sp.motion,speed=a.u*(m==="hop"?2.0:m==="waddle"?1.25:1.55)*a.mult*(P.reduced?.6:1);
   a.moving=wants;
   /* 向きは、はっきり左右に動いたときだけ、少し間をあけて変える（ぶるぶる向きが変わらないように） */
-  function move(){var v=avoid(a,dx/d,dy/d),s=Math.min(d,speed*dt),nd=v.x>0?1:-1;a.x+=v.x*s;a.y+=v.y*s;
+  function move(){
+    var v=avoid(a,dx/d,dy/d),s=Math.min(d,speed*dt),nd=v.x>0?1:-1;
+    var nx=a.x+v.x*s,ny=a.y+v.y*s,hit=blockedAt(a,nx,ny);
+    if(hit){
+      /* おしのけるのではなく、かさなる ほうへは そもそも 進まない。
+         たてだけ・よこだけ なら 進めるときは すべるように よける */
+      if(!blockedAt(a,a.x,ny)){nx=a.x;}
+      else if(!blockedAt(a,nx,a.y)){ny=a.y;}
+      else{
+        nx=a.x;ny=a.y;
+        /* まっこうから ぶつかる ときは、たまに こける */
+        var hv=Math.hypot(hit.tx-hit.x,hit.ty-hit.y)||1,hd=(v.x*(hit.tx-hit.x)+v.y*(hit.ty-hit.y))/hv;
+        if(hd<-.5&&a.moving&&hit.moving&&!a.hold&&!hit.hold&&
+           P.now-(a.bumpT||-9)>8&&P.now-(hit.bumpT||-9)>8&&Math.random()<dt*.8)stumble(a,hit);
+      }
+    }
+    a.x=nx;a.y=ny;
     /* つなひきのように、うしろに下がっても向きを変えない */
     if(a.faceLock){a.dir=a.face||a.dir;return;}
     if(nd!==a.dir&&Math.abs(v.x)>.3&&P.now-(a.dirT||-9)>.35){a.dir=nd;a.dirT=P.now;}}
@@ -267,9 +311,7 @@ function unstack(a,b,dt){
   var wa=a.sess&&!b.sess?0:(!a.sess&&b.sess?2:1),wb=2-wa;
   var move=Math.min(need-ax,Math.max(a.u,b.u)*9*dt);
   a.x+=s*move*.5*wa;b.x-=s*move*.5*wb;
-  /* ぶつかって こけるのは たまに（あそんでいる子は そのまま） */
-  if(ax<need*.55&&a.moving&&b.moving&&!a.sess&&!b.sess&&!a.chat&&!b.chat&&
-     P.now-(a.bumpT||-9)>8&&P.now-(b.bumpT||-9)>8&&Math.random()<.2)stumble(a,b);
+
 }
 
 P.update=function(dt){
