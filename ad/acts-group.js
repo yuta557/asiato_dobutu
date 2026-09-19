@@ -477,7 +477,7 @@ ACT.oni={
           if(nearO&&nd<(c.u+nearO.u)*.95){
             var ax2=c.x-nearO.x,ay2=(c.y-nearO.y)*1.3,al=Math.hypot(ax2,ay2)||1;
             go(c,c.x+ax2/al*c.u*2.2,c.y+ay2/al*c.u*1.1,1.5);
-          }else go(c,gx+px,gy+py,1.45);
+          }else go(c,gx+px,gy+py,1.58);
         }
         /* おいかけている子だけでなく、すぐそばに 来た子は だれでも タッチ
            （体が かさなるほど 近づいたら、まだ はやくても タッチしたことにする） */
@@ -497,7 +497,8 @@ ACT.oni={
            Math.hypot(G.x-c.x,G.y-c.y)<Math.hypot(G.x-r.x,G.y-r.y)*.9){
           r.fleeP=X.fleeFrom(r,c)||r.fleeP;r.fleeT=rand(.9,1.4);
         }
-        if(r.fleeP)go(r,r.fleeP.x,r.fleeP.y,1.45);
+        /* さいごのほうは にげる子が つかれてくる */
+        if(r.fleeP)go(r,r.fleeP.x,r.fleeP.y,s.t>26?1.36:1.42);
       });
       /* ときどき だれかが きゅうに 本気を出す */
       s.spurtT-=dt;

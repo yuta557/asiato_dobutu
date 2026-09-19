@@ -46,6 +46,12 @@ P.roomySpot=function(a){
 };
 var TOP={foot1:2.6,hand0:2.6,hand3:2.2,hand5:2.2,foot5:2.2};
 
+/* いまいる場所とは ちがう ところを えらぶ（おなじ場所を えらび続けて 止まらないように） */
+P.farSpot=function(a){
+  var p=P.roomySpot(a);
+  for(var i=0;i<8&&Math.hypot(p.x-a.x,p.y-a.y)<a.u*2.5;i++)p=S.randomSpot(a.u)||p;
+  return p;
+};
 P.later=function(sec,fn){P.queue.push({t:P.now+sec,fn:fn});};
 P.say=function(a,text,dur){
   if(!a||!text)return;
@@ -256,7 +262,7 @@ function stepAnimal(a,dt){
       if(P.inArea(a.tx,a.ty,a.u,a.sess)){var q=P.roomySpot(a);a.tx=q.x;a.ty=q.y;}
     }
     if(a.rest>0)a.rest-=dt;
-    else if(Math.hypot(a.tx-a.x,a.ty-a.y)<a.u*.3){a.rest=rand(1.6,4);var p=P.roomySpot(a);a.tx=p.x;a.ty=p.y;}
+    else if(Math.hypot(a.tx-a.x,a.ty-a.y)<a.u*.3){a.rest=rand(1.6,4);var p=P.farSpot(a);a.tx=p.x;a.ty=p.y;}
     /* 池のまえで 立ち往生したら、べつの場所へ */
     if(a.stuckT>.8){a.stuckT=0;var q2=P.roomySpot(a);a.tx=q2.x;a.ty=q2.y;a.rest=0;}
   }
@@ -337,12 +343,17 @@ function stepAnimal(a,dt){
   if(!wants&&a.face&&a.face!==a.dir&&P.now-(a.dirT||-9)>.6){a.dir=a.face;a.dirT=P.now;}
   if(a.knock){a.x+=a.knock*dt;a.knock*=Math.pow(.02,dt);if(Math.abs(a.knock)<2)a.knock=0;}
   if(a.z>0||a.vz>0){a.vz-=a.u*15*dt;a.z+=a.vz*dt;if(a.z<=0){a.z=0;a.vz=0;a.land=1;}}
-  /* 見まもり：うごきたいのに ずっと 止まったままなら、行き先を 変えて やりなおす */
-  if(a.moving&&Math.hypot(a.x-(a.frzX==null?a.x-99:a.frzX),a.y-(a.frzY==null?a.y:a.frzY))<a.u*.05){
+  /* 見まもり：ずっと 止まったままなら、行き先を 変えて やりなおす
+     （あそび中・おしゃべり中・見まもり中・かくれんぼで かくれている子は のぞく） */
+  if(Math.hypot(a.x-(a.frzX==null?a.x-99:a.frzX),a.y-(a.frzY==null?a.y:a.frzY))<a.u*.05){
     a.frozT=(a.frozT||0)+dt;
-    if(a.frozT>3){
-      a.frozT=0;a.stuckT=0;a.rest=0;a.z=0;a.vz=0;a.land=0;
-      if(!a.sess){var qz=P.roomySpot(a);a.tx=qz.x;a.ty=qz.y;}
+    var busyNow=a.sess||a.chat||a.watch||a.helping||a.hidden||a.leaving;
+    if(a.frozT>(a.moving?3:6)&&!busyNow){
+      a.frozT=0;a.stuckT=0;a.rest=0;a.z=0;a.vz=0;a.land=0;a.hold=false;
+      var qz=P.farSpot(a);a.tx=qz.x;a.ty=qz.y;
+    }else if(a.frozT>12&&busyNow&&!a.sess&&!a.hidden&&!a.galSet){
+      /* 見まもりなどで ながく 止まっていたら、いちど ときはなつ */
+      a.frozT=0;a.watch=null;a.watchMove=false;a.galSet=false;a.helping=null;a.hold=false;a.rest=rand(.2,.8);
     }
   }else{a.frozT=0;a.frzX=a.x;a.frzY=a.y;}
   if(!a.leaving){a.x=clamp(a.x,a.u*.8,S.W-a.u*.8);a.y=clamp(a.y,S.top,S.bottom);bushStepOut(a,dt);}
