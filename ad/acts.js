@@ -373,7 +373,18 @@ var ACT={
         }else s.endSoon=true;
         return;
       }
-      if(s.t>s.dur){P.say(c,"はあはあ…",1.2);P.later(.5,function(){if(alive(s,r))P.say(r,"つかれた〜",1.2);});s.endSoon=true;s.es=0;}
+      if(s.t>s.dur){
+        /* 決着が つくまでは おわらない：おにが 本気を出して もうひと押し */
+        if(s.t<46&&!(s.lastPush&&P.now-s.lastPush<5.5)){
+          s.lastPush=P.now;s.dur=s.t+5;c.burst=rand(2.6,4);
+          P.say(c,pick(["つかまえるぞ〜！","ここで つかまえる！"]),1.3);
+          P.note(c.x,P.headY(c)-6,"ビューン","#E9A93B");
+        }else{
+          P.say(c,"はあはあ…",1.2);
+          P.later(.5,function(){if(alive(s,r))P.say(r,"つかれた〜",1.2);});
+          s.endSoon=true;s.es=0;
+        }
+      }
     },
     tap:function(s,a){var c=s.c,r=s.r;
       if(s.endSoon){tapLine(a,"tagEnd",["はあはあ…","いっぱい はしった〜"]);return;}

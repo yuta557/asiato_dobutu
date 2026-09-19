@@ -122,16 +122,22 @@ function headAt(a,y){return y-a.u*(a.sp.top||TOP[a.sp.key]||(a.sp.kind==="hand"?
 function stackBad(a,ax,ay,b){
   if(b===a||b.hidden||b.leaving||a.hidden||a.leaving)return -1;
   if((a.scatter||0)>0||(b.scatter||0)>0)return -1;
-  /* 一列にならぶ あそびの なかまどうしは、ならびを くずさない。
-     ボールを みんなで とりに行くときも、ぶつかって 止まらないようにする */
-  if(a.sess&&a.sess===b.sess&&(a.sess.type==="race"||a.sess.type==="daruma"||a.sess.type==="tug"||
-     (a.sess.type==="ball"&&a.sess.fetch&&a.sess.fetch.race)))return -1;
+  /* おなじ あそびの なかまどうしは、おし合わずに すりぬける
+     （正面衝突で 身動きが とれなくなるより、通りぬけたほうが よい） */
+  if(a.sess&&a.sess===b.sess)return -1;
   var dx=Math.abs(ax-b.x),dy=Math.abs(ay-b.y),near=(a.u+b.u)*.38;
   if(dy<=near)return ((a.u+b.u)-1.2*Math.min(a.u,b.u))-dx;
   var backIsA=ay<b.y,bu=backIsA?a.u:b.u;
   var hb=backIsA?headAt(a,ay):headAt(b,b.y),hf=backIsA?headAt(b,b.y):headAt(a,ay);
   if(hb+bu*.62<=hf)return -1;               /* うしろの子の 顔が 見えている */
   return (a.u+b.u)*.5-dx;
+}
+/* まっこうから ぶつかりに いっているか（そのときは すりぬける） */
+function headOn(a,b){
+  var ax=a.tx-a.x,ay=a.ty-a.y,al=Math.hypot(ax,ay);
+  var bx=b.tx-b.x,by=b.ty-b.y,bl=Math.hypot(bx,by);
+  if(al<2||bl<2)return false;
+  return (ax*bx+ay*by)/(al*bl)<-.45;
 }
 /* その場所へ 動いたら かさなってしまうか（いま より わるくなるときだけ とめる） */
 function blockedAt(a,x,y){
@@ -140,6 +146,8 @@ function blockedAt(a,x,y){
     var b=L[i];
     /* あそんでいる子は、あそんでいない子に 道を ふさがれない（外の子が よける） */
     if(a.sess&&!b.sess)continue;
+    /* 正面から ぶつかる ときは、おし合わずに すりぬける */
+    if(headOn(a,b))continue;
     var nv=stackBad(a,x,y,b);
     if(nv<=0)continue;
     var cv=stackBad(a,a.x,a.y,b);
@@ -373,10 +381,15 @@ function stepAnimal(a,dt){
       if((a.stuckT||0)>.2)a.stuckT=Math.max(0,a.stuckT-dt*.8);
       else a.vz=a.u*(a.mult>1.2?4:3.4);
     }
+    if(!(a.z>0||a.vz>0))a.moving=false;      /* 地面にいるときは 止まって見える */
     if((a.z>0||a.vz>0)&&d>1)move();
   }else if(wants){
-    /* あしの ふりは ゆっくりめに。はやく走るときだけ 少しはやく（それでも 上限をつける） */
-    move();a.ph+=dt*(m==="waddle"?5:Math.min(speed/a.u,2.4)*2.6);
+    /* じっさいに 進んだときだけ あしを うごかす（その場で 足ぶみ しない） */
+    var px0=a.x,py0=a.y;
+    move();
+    var moved0=Math.hypot(a.x-px0,a.y-py0);
+    if(moved0>a.u*.004)a.ph+=dt*(m==="waddle"?5:Math.min(speed/a.u,2.4)*2.6);
+    else a.moving=false;
   }
   if(!wants&&a.face&&a.face!==a.dir&&P.now-(a.dirT||-9)>.6){a.dir=a.face;a.dirT=P.now;}
   if(a.knock){a.x+=a.knock*dt;a.knock*=Math.pow(.02,dt);if(Math.abs(a.knock)<2)a.knock=0;}
@@ -415,6 +428,14 @@ function stumble(a,b){
 }
 function unstack(a,b,dt){
   if(a.hidden||b.hidden||a.leaving||b.leaving)return;
+  if(a.sess&&a.sess===b.sess)return;          /* なかまどうしは すりぬける */
+  if(headOn(a,b)){
+    /* 正面から ぶつかる ときは すりぬける。ごくまれに こける */
+    if(a.moving&&b.moving&&!a.sess&&!b.sess&&!a.chat&&!b.chat&&
+       Math.hypot(a.x-b.x,(a.y-b.y)*1.5)<(a.u+b.u)*.5&&
+       P.now-(a.bumpT||-9)>10&&P.now-(b.bumpT||-9)>10&&Math.random()<dt*.5)stumble(a,b);
+    return;
+  }
   if((a.scatter||0)>0||(b.scatter||0)>0)return;
   var dx=a.x-b.x,ax=Math.abs(dx),dy=Math.abs(a.y-b.y),near=(a.u+b.u)*.38,need;
   if(dy<=near)need=(a.u+b.u)-1.2*Math.min(a.u,b.u);          /* よこならび */
