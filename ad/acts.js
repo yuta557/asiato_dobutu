@@ -68,7 +68,8 @@ function goodbye(s,a,b,el,start){
 function fx(s,cool){if(P.now-(s.fxT==null?-99:s.fxT)>cool){s.fxT=P.now;return true;}return false;}
 
 /* おにから遠く、しげみ・文字にかぶらず、今の進む向きに近い場所をえらぶ */
-function pickFlee(s,r,c){
+/* にげる先をえらぶ。others＝ほかの にげる子（おなじ すみに かたまらないように はなれる） */
+function pickFlee(s,r,c,others){
   var base=Math.atan2(r.y-c.y,r.x-c.x),prev=s.flee?Math.atan2(s.flee.y-r.y,s.flee.x-r.x):base,best=null,bs=-1e9;
   [0,.5,-.5,1,-1,1.5,-1.5,2.1,-2.1,2.7,-2.7].forEach(function(o){
     var an=base+o,far=r.u*rand(3.2,4.2),q={x:r.x+Math.cos(an)*far,y:r.y+Math.sin(an)*far*.7};
@@ -76,6 +77,15 @@ function pickFlee(s,r,c){
     if(!S.clear(q.x,q.y,r.u)||!S.segClear(r,q,r.u*.85))return;
     var turn=Math.abs(Math.atan2(Math.sin(an-prev),Math.cos(an-prev)));
     var sc=Math.hypot(q.x-c.x,q.y-c.y)-Math.abs(o)*r.u*.5-turn*r.u*.6;
+    /* ほかの にげる子の ちかくは えらばない（みんなで 同じ はしっこに 行かない） */
+    if(others)others.forEach(function(w){
+      if(w===r)return;
+      var dw=Math.hypot(q.x-w.x,(q.y-w.y)*1.3),R=(r.u+w.u)*2.2;
+      if(dw<R)sc-=(R-dw)*1.4;
+    });
+    /* かべに はりつかない */
+    var wall=Math.min(q.x,S.W-q.x,(q.y-S.top)*1.6,(S.bottom-q.y)*1.6);
+    if(wall<r.u*2)sc-=(r.u*2-wall)*1.2;
     if(sc>bs){bs=sc;best=q;}
   });
   return best||S.safeSpot(r.u,{x:r.x,y:r.y},function(q){return Math.hypot(q.x-c.x,q.y-c.y)>Math.hypot(r.x-c.x,r.y-c.y);})||s.flee;
@@ -242,13 +252,13 @@ var ACT={
       if(!s.spurted&&s.t>s.spurtAt&&!counting){
         s.spurted=true;
         var who=Math.random()<.5?c:r;
-        who.burst=rand(2.6,4);
+        who.burst=rand(2.6,4);who.dash=rand(.6,.9);
         P.say(who,who===c?pick(["ここからが 本気！","スピード アップ！"]):pick(["まだまだ〜！","本気で にげるぞ〜"]),1.4);
         P.note(who.x,P.headY(who)-6,"ビューン","#E9A93B");
         var o3=who===c?r:c;
         P.later(.7,function(){if(alive(s,o3))P.say(o3,pick(["えっ、はやい！","まけないぞ〜！"]),1.3);});
       }
-      /* ---- とちゅうから 入ってくる子 ---- */
+      /* ---- ほかの子が 見にくる（おいかけっこは ふたりの あそびなので、入らずに おうえんする）---- */
       if(!s.join&&!s.joined&&!s.noJoin&&!counting&&s.m.length<3&&s.t>s.joinT){
         /* 入ってくるのは たまに（3回に1回くらい）。1回きめたら もう さそわない */
         if(Math.random()<.35){
@@ -264,20 +274,20 @@ var ACT={
           J.t+=dt;
           if(J.step===0){J.step=1;P.say(jg,"なにしてるの〜？",1.4);}
           else if(J.t>1.1&&J.step===1){J.step=2;faceTo(c,jg);P.say(c,"おいかけっこ！",1.2);}
-          else if(J.t>2.3&&J.step===2){J.step=3;P.say(jg,"ぼくも いれて〜！",1.4);P.jump(jg,3.4);}
-          else if(J.t>3.5&&J.step===3){
-            s.join=null;s.joined=true;s.dur+=rand(2,4);
-            jg.sess=s;jg.rest=0;jg.hold=false;jg.face=0;s.m.push(jg);s.rs.push(jg);
-            /* 入ったばかりの子は まず にげる。おには しばらく 前からの子を おいかける */
-            jg.fleeP=pickFlee({flee:null},jg,c);jg.fleeT=rand(1,1.6);
-            s.minT=Math.max(s.minT,s.tt+2.2);s.swapT=P.now+rand(5,7);
-            P.say(r,"にげろ〜！",1.3);
+          else if(J.t>2.3&&J.step===2){J.step=3;P.say(jg,pick(["いいな〜、たのしそう！","ぼくも やりたいな〜"]),1.4);P.jump(jg,3.4);}
+          else if(J.t>3.6&&J.step===3){J.step=4;P.say(r,pick(["つぎは いっしょに あそぼ！","おうえん してて〜！"]),1.4);}
+          else if(J.t>5&&J.step===4){
+            /* おいかけっこは ふたりの あそび。入らずに 「がんばれ〜」と 言って もどる */
+            P.say(jg,pick(["がんばれ〜！","はやいね〜！"]),1.4);
+            s.join=null;s.joined=true;
+            var jp=P.farSpot?P.farSpot(jg):P.roomySpot(jg);
+            if(jp)go(jg,jp.x,jp.y,1);
           }
           /* そばまで 走ってくる（おにに ぶつかる ほど 近づかない） */
-          if(s.join){
+          if(s.join&&J.step<4){
             var jd=Math.hypot(jg.x-c.x,jg.y-c.y)||1,jr=(jg.u+c.u)*2.2;
             go(jg,c.x+(jg.x-c.x)/jd*jr,c.y+(jg.y-c.y)/jd*jr,1.2);
-          }
+          }else if(s.join){jg.tx=jg.x;jg.ty=jg.y;jg.moving=false;}
         }
       }
       /* ---- にげる子が しげみに とびこんで やりすごす ---- */
@@ -721,28 +731,37 @@ var ACT={
         var sx=clamp(bx,L.u,S.W-L.u)-bx,sy=clamp(by,S.top,S.bottom)-by;
         go(L,L.x+sx,L.y+sy,1.2);L.hold=false;s.leadMove=true;
       }
+      s.hx=dx/dl;s.hy=dy/dl;
       var k=0;
       s.m.slice(1).forEach(function(f,i){
         k+=((i?s.m[i].u:L.u)+f.u)*1.05;
-        var q=P.unhidePoint(L.tx-dx/dl*k,L.ty-dy/dl*k*.6,f.u);go(f,q.x,q.y,1.6);
+        var q=P.unhidePoint(L.tx-s.hx*k,L.ty-s.hy*k*.6,f.u);go(f,q.x,q.y,1.6);
       });
       P.say(L,"ならんで〜！",1.2);},
     update:function(s,dt){var L=s.m[0];
       if(s.st===1)return goodbye(s,s.m[s.m.length-1],L,s.tt,1.4);
       if(!s.lined){
         if(s.leadMove&&arrived(L)){s.leadMove=false;L.hold=true;}
-        /* うしろの子が ぜんぶ 先頭のうしろに ならぶまで 出発しない */
-        function atSlot(f,k){return Math.hypot(f.tx-f.x,f.ty-f.y)<f.u*(k||.5);}
+        /* 「うん」と こたえた子が ぜんぶ 先頭の すぐうしろに ならぶまで 出発しない。
+           席は 先頭の いまの ばしょから 計算しなおす（先頭が うごいても ずれない） */
+        var kk=0;
+        s.m.slice(1).forEach(function(f,i){
+          kk+=((i?s.m[i].u:L.u)+f.u)*1.05;
+          var q=P.unhidePoint(L.x-s.hx*kk,L.y-s.hy*kk*.6,f.u);
+          if(Math.hypot(q.x-f.tx,q.y-f.ty)>f.u*.2)go(f,q.x,q.y,1.6);
+        });
+        function atSlot(f,k){return Math.hypot(f.tx-f.x,f.ty-f.y)<f.u*(k||.42);}
         var ready=!s.leadMove&&s.m.slice(1).every(function(f){return atSlot(f);});
-        if(!ready&&s.tt>12){
-          /* どうしても ならべない子は、今回は いっしょに行かない（歩きだしてから さそう） */
-          s.m.slice(1).forEach(function(f){
-            if(atSlot(f,1.3))return;
+        if(!ready&&s.tt>15){
+          /* どうしても ならべない子だけ、今回は いっしょに行かない（歩きだしてから さそう）。
+             のこった子は そのまま ならぶまで まつ */
+          var far=s.m.slice(1).filter(function(f){return !atSlot(f,1.1);});
+          far.forEach(function(f){
             var i=s.m.indexOf(f);if(i<0)return;s.m.splice(i,1);
             f.sess=null;f.hold=false;f.face=0;f.mult=1;f.rest=rand(.3,1);f.cool=rand(1,3);
           });
           if(s.m.length<2)return true;
-          ready=true;
+          if(far.length)s.tt=0;else ready=true;
         }
         if(ready){
           s.lined=true;s.tt=0;L.hold=false;
@@ -764,10 +783,21 @@ var ACT={
         if(s.lt>2.5){s.lt=0;s.i++;if(s.i>=s.wp.length)s.i=0;var nx2=S.safeSpot(L.u*1.2,s.wp[s.i])||S.randomSpot(L.u*2);s.wp[s.i]=nx2;go(L,nx2.x,nx2.y,.95);}
       }else{s.lt=0;s.lx=L.x;s.ly=L.y;}
       /* うしろの子は、先頭が通った道をそのままたどる（しげみや文字にかぶらない） */
-      s.trail=s.trail||[{x:L.x,y:L.y}];
-      var lt=s.trail[s.trail.length-1];
-      if(Math.hypot(L.x-lt.x,L.y-lt.y)>L.u*.2)s.trail.push({x:L.x,y:L.y});
+      s.trail=s.trail||[{x:L.x,y:L.y,c:0}];
+      /* 道すじに「はじめから何歩ぶんか」を おぼえさせる */
+      if(s.trail[0].c==null)s.trail.forEach(function(q,i){q.c=i?s.trail[i-1].c+Math.hypot(q.x-s.trail[i-1].x,q.y-s.trail[i-1].y):0;});
+      var lt=s.trail[s.trail.length-1],seg=Math.hypot(L.x-lt.x,L.y-lt.y);
+      if(seg>L.u*.2){s.trail.push({x:L.x,y:L.y,c:lt.c+seg});lt=s.trail[s.trail.length-1];}
       if(s.trail.length>400)s.trail.shift();
+      /* 先頭が ぴょんぴょん とぶ子だと 道が とびとびに のびて、うしろの子が
+         「走っては 止まる」の こきざみ歩きに なってしまう。
+         なめらかに すすむ「見えない先頭」を つくり、その はやさに 合わせて ついていく */
+      var tlen=lt.c;
+      if(s.vpos==null)s.vpos=tlen;
+      var vp0=s.vpos;
+      s.vpos+=(tlen-s.vpos)*Math.min(1,dt*2.4);
+      var vsp=(s.vpos-vp0)/Math.max(dt,.001);
+      s.vspd=(s.vspd==null?vsp:s.vspd+(vsp-s.vspd)*Math.min(1,dt*2.5));
       /* 先頭が すすんでいる むき（あとから入る子が うしろに つくのに つかう） */
       var tl=s.trail.length,hx=0,hy=0;
       if(tl>=2){hx=s.trail[tl-1].x-s.trail[tl-2].x;hy=s.trail[tl-1].y-s.trail[tl-2].y;}
@@ -779,8 +809,13 @@ var ACT={
         want+=(s.m[i-1].u+f.u)*1.05;
         if(f.lag>0){f.lag-=dt;f.hold=true;if(f.lag<=0){f.hold=false;f.catchT=2;P.say(f,"まって〜！",1.1);}continue;}
         f.catchT=Math.max(0,(f.catchT||0)-dt);
-        var acc=0,pt=null;
-        for(var j=s.trail.length-1;j>0;j--){acc+=Math.hypot(s.trail[j].x-s.trail[j-1].x,s.trail[j].y-s.trail[j-1].y);if(acc>=want){pt=s.trail[j-1];break;}}
+        var pt=null,at=s.vpos-want;
+        for(var j=s.trail.length-1;j>=0;j--){
+          if(s.trail[j].c<=at){
+            var q0=s.trail[j],q1=s.trail[Math.min(j+1,s.trail.length-1)],span=(q1.c-q0.c)||1,r0=clamp((at-q0.c)/span,0,1);
+            pt={x:q0.x+(q1.x-q0.x)*r0,y:q0.y+(q1.y-q0.y)*r0};break;
+          }
+        }
         /* 道すじが まだ みじかいときは、いま いちばん うしろの子の さらに うしろへ（横入りしない） */
         var pv=s.m[i-1],gp=(pv.u+f.u)*1.05;
         if(!pt)pt={x:pv.x-hx*gp,y:pv.y-hy*gp*.6};
@@ -788,7 +823,12 @@ var ACT={
         var vx=pt.x-pv.x,vy=pt.y-pv.y,vd=Math.hypot(vx,vy)||1;
         if(vd<gp*.92){pt={x:pv.x+vx/vd*gp*.92,y:pv.y+vy/vd*gp*.92};}
         var tp=P.unhidePoint(pt.x,pt.y,f.u);
-        go(f,tp.x,tp.y,f.catchT>0?1.8:1.05);
+        /* ちょうど ついていける はやさ：先頭と おなじ はやさ＋おくれたぶん だけ すこし足す。
+           ねらう点は すこし前に おいて、止まったり 走ったり しないようにする */
+        var fm=f.sp.motion,fbase=f.u*(fm==="hop"?2.0:fm==="waddle"?1.25:1.55);
+        var along=(tp.x-f.x)*hx+(tp.y-f.y)*hy;
+        var v=(s.vspd||0)+clamp(along*1.2,-f.u*.9,f.u*1.5)+(f.catchT>0?f.u*1.2:0);
+        go(f,tp.x+hx*f.u*.7,tp.y+hy*f.u*.42,clamp(v/fbase,.05,2.4));
       }
       /* 歩いていくうちに、とちゅうの子が どんどん くわわる */
       s.joinT=(s.joinT==null?rand(1.5,3):s.joinT)-dt;
@@ -936,7 +976,7 @@ X.end=function(s){
 X.ACT=ACT;
 X.h={go:go,arrived:arrived,faceTo:faceTo,next:next,once:once,alive:alive,tapLine:tapLine,goodbye:goodbye,fx:fx,weighted:weighted};
 /* にげる先をさがす（ふえおに からも つかう） */
-X.fleeFrom=function(r,c){return pickFlee({flee:r.fleeP},r,c);};
+X.fleeFrom=function(r,c,others){return pickFlee({flee:r.fleeP},r,c,others);};
 /* その子が x のところまで 何秒で 行けるか（ならぶのに 間に合うかの 見つもり） */
 X.canReach=function(a,x,secs){
   var m=a.sp.motion,base=a.u*(m==="hop"?2.0:m==="waddle"?1.25:1.55)*1.5;

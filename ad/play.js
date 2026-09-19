@@ -331,6 +331,8 @@ function stepAnimal(a,dt){
   var speed=base*a.mult*(P.reduced?.6:1);
   /* 本気モード／水の中は おそくなる */
   if(a.burst>0){a.burst-=dt;speed*=1.3;}
+  /* 「本気！」と 言ったときの、一瞬だけ ほんとうに はやくなる ダッシュ */
+  if(a.dash>0){a.dash-=dt;speed*=1.8;}
   if(inWater(a.x,a.y,1))speed*=.55;
   a.moving=wants;
   /* 向きは、はっきり左右に動いたときだけ、少し間をあけて変える（ぶるぶる向きが変わらないように） */

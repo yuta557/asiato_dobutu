@@ -135,6 +135,8 @@ ACT.daruma={
   update:function(s,dt){
     var oni=s.m[0],u=maxU(s.m),goalX=s.ox-s.side*u*1.1;
     if(s.st===0){
+      /* ならび終わった子から、おにの ほうを 向いて まつ（うしろ向きのままに しない） */
+      (s.players||[]).forEach(function(p){if(arrived(p)){p.face=-s.side;p.dir=-s.side;}});
       if(allThere(s,null,12)){
         lineUp(s,s.sx,oni);oni.x=s.ox;oni.y=s.oy;
         if(s.players.length<1)return true;
@@ -266,6 +268,8 @@ ACT.race={
   update:function(s,dt){
     var u=maxU(s.m),dirX=s.x1>s.x0?1:-1;
     if(s.st===0){
+      /* スタートに ついた子から、ゴールの ほうを 向いて まつ（うしろ向きのままに しない） */
+      s.m.forEach(function(a){if(arrived(a)){a.face=dirX;a.dir=dirX;}});
       if(allThere(s,null,12)){
         lineUp(s,s.x0);
         if(s.m.length<2)return true;
@@ -279,7 +283,9 @@ ACT.race={
       if(s.tt>2.5&&once(s,"c3")){
         P.say(caller,"どん！",.9);
         /* どうぶつによる はやさの ちがいは なくし、その回の「ちから」だけで きまる */
-        s.m.forEach(function(a){a.hold=false;a.even=rand(.92,1.12);a.spd=1.9;});
+        /* 体の大きさで はやさが 変わらないように そろえる（その回の「ちから」だけで きまる） */
+        var bu=maxU(s.m);
+        s.m.forEach(function(a){a.hold=false;a.even=rand(.97,1.05);a.spd=1.9*(bu/a.u);a.dash=0;});
         s.spurtAt=rand(2.5,5);s.spurted=false;
         next(s);
       }
@@ -291,13 +297,17 @@ ACT.race={
         s.spurted=true;
         var run=s.m.filter(function(a){return !a.done;});
         var who=pick(run);
-        if(who){who.burst=rand(2.5,4);P.say(who,pick(["ここからが 本気！","ラストスパート！"]),1.4);P.note(who.x,P.headY(who)-6,"ビューン","#E9A93B");}
+        if(who){who.dash=rand(.9,1.3);P.say(who,pick(["ここからが 本気！","ラストスパート！"]),1.4);P.note(who.x,P.headY(who)-6,"ビューン","#E9A93B");}
       }
+      /* いちばん前の子との 差（ぬかれた子は すこし がんばるので、大きく はなれない） */
+      var lead=-1e9;
+      s.m.forEach(function(a){if(!a.done)lead=Math.max(lead,(a.x-s.x0)*dirX);});
       s.m.forEach(function(a){
         if(a.done)return;
         a.boost=Math.max(0,(a.boost||0)-dt);
         if(a.trip>0){a.trip-=dt;a.hold=true;a.shake=Math.sin(P.now*40)*a.u*.05;if(a.trip<=0){a.hold=false;a.shake=0;}return;}
-        go(a,s.x1+dirX*a.u*.6,a.lane,a.boost>0?a.spd*1.5:a.spd);
+        var chase=1+Math.min(.22,Math.max(0,(lead-(a.x-s.x0)*dirX)/a.u)*.06);
+        go(a,s.x1+dirX*a.u*.6,a.lane,a.spd*chase*(a.boost>0?1.5:1));
         if((a.x-s.x1)*dirX>-a.u*.06){
           a.done=true;a.hold=true;s.order.push(a);
           var place=s.order.length;
@@ -457,6 +467,20 @@ ACT.tug={
 };
 
 /* ---------------- ふえおに（つかまった子も おにに なる） ---------------- */
+/* ふえおに：おにが まだ とおいときに、広くて ほかの子も いない ばしょを さがす */
+function openSpot(r,rs,c){
+  var best=null,bs=-1e9;
+  for(var i=0;i<14;i++){
+    var q={x:rand(r.u*1.6,S.W-r.u*1.6),y:rand(S.top+r.u*.4,S.bottom-r.u*.3)};
+    if(!S.clear(q.x,q.y,r.u))continue;
+    var sc=Math.min(AD.dist(q,c),r.u*9)*.8;
+    rs.forEach(function(w){if(w!==r)sc+=Math.min(AD.dist(q,w),r.u*5)*.55;});
+    sc-=Math.abs(q.x-S.W/2)*.28;
+    sc-=AD.dist(q,r)*.35;
+    if(sc>bs){bs=sc;best=q;}
+  }
+  return best||P.roomySpot(r);
+}
 ACT.oni={
   init:function(s){
     var oni=s.m[0];
@@ -465,7 +489,14 @@ ACT.oni={
     s.m.forEach(function(a){a.even=rand(.92,1.1);});
     s.spurtT=rand(6,10);
     oni.hold=true;oni.sleep=true;
-    s.rs.forEach(function(r){var q=P.roomySpot(r);go(r,q.x,q.y,1.5);});
+    /* にげる子は 草原じゅうに ちらばる（みんなで はしっこに かたまらない） */
+    var away=oni.x<S.W/2?1:-1,nrs=s.rs.length;
+    s.rs.forEach(function(r,i){
+      var fx=clamp(S.W*.5+away*S.W*.22+(i-(nrs-1)/2)*r.u*2.6,r.u*1.6,S.W-r.u*1.6);
+      var fy=clamp(S.top+(S.bottom-S.top)*((i%3)+.5)/3,S.top+r.u*.4,S.bottom-r.u*.3);
+      var q=S.clear(fx,fy,r.u)?{x:fx,y:fy}:(S.safeSpot(r.u,{x:fx,y:fy})||P.roomySpot(r));
+      go(r,q.x,q.y,1.5);
+    });
     P.say(oni,"わたしが おにね！ かぞえるよ〜",1.6);
     s.count=3.4;
     /* どの子が おに なのか わかるように、あたまの上に しるしを出す */
@@ -502,6 +533,15 @@ ACT.oni={
           c.aim=t||null;
           var i=free.indexOf(t);if(i>=0)free.splice(i,1);
         });
+        /* おいつめている おにが いたら、いちばん ひまな おにが その子の うらに まわりこむ */
+        if(s.onis.length>=2&&s.rs.length>=1){
+          var hot=s.onis.filter(function(c){return c.aim;})
+            .sort(function(p,q){return AD.dist(p,p.aim)-AD.dist(q,q.aim);})[0];
+          var idle=s.onis.filter(function(c){return c!==hot;})
+            .sort(function(p,q){return (q.aim?AD.dist(q,q.aim):1e9)-(p.aim?AD.dist(p,p.aim):1e9);})[0];
+          if(hot&&idle&&AD.dist(hot,hot.aim)<hot.u*8&&
+             (!idle.aim||AD.dist(idle,idle.aim)>AD.dist(hot,hot.aim)*1.3))idle.aim=hot.aim;
+        }
       }
       /* おには 自分の あいてを おいかける。つかまった子も おにに なる */
       s.onis.forEach(function(c){
@@ -523,9 +563,17 @@ ACT.oni={
           var hx2=(t.tx==null?0:t.tx-t.x),hy2=(t.ty==null?0:t.ty-t.y),hl2=Math.hypot(hx2,hy2);
           if(hl2>1){hx2/=hl2;hy2/=hl2;}else{hx2=0;hy2=0;}
           if(k>0){
-            /* にげる先に まわりこむ */
-            var lead=t.u*(1.6+k*1.2);
-            gx=clamp(t.x+hx2*lead,c.u,S.W-c.u);gy=clamp(t.y+hy2*lead*.6,S.top,S.bottom);
+            var wall=Math.min(t.x,S.W-t.x);
+            if(wall<t.u*3.6){
+              /* はしに おいつめられている子の 「もどり道」を ふさぐ（うらを とる） */
+              var into=t.x<S.W/2?1:-1;
+              gx=clamp(t.x+into*t.u*(2+k*.8),c.u,S.W-c.u);
+              gy=clamp(t.y+(c.y>t.y?1:-1)*t.u*.5,S.top,S.bottom);
+            }else{
+              /* にげる先に まわりこむ */
+              var lead=t.u*(1.6+k*1.2);
+              gx=clamp(t.x+hx2*lead,c.u,S.W-c.u);gy=clamp(t.y+hy2*lead*.6,S.top,S.bottom);
+            }
           }else if(hl2>1&&AD.dist(c,t)>(c.u+t.u)*1.6){
             /* ひとりのときも すこしだけ 先を よむ */
             gx=clamp(t.x+hx2*t.u*.9,c.u,S.W-c.u);gy=clamp(t.y+hy2*t.u*.5,S.top,S.bottom);
@@ -551,11 +599,22 @@ ACT.oni={
         var c=s.onis.slice().sort(function(p,q){return AD.dist(r,p)-AD.dist(r,q);})[0];
         if(!c)return;
         r.hold=false;r.face=0;
+        /* おにが まだ とおいうちは、にげずに 広いところへ 歩いて ようすを見る
+           （みんなで 遠くの はしっこに かたまらない） */
+        if(AD.dist(r,c)>r.u*7.5){
+          r.watchT=(r.watchT||0)-dt;
+          if(!r.watchP||r.watchT<=0||Math.hypot(r.watchP.x-r.x,r.watchP.y-r.y)<r.u*.7){
+            r.watchP=openSpot(r,s.rs,c);r.watchT=rand(1.8,2.8);
+          }
+          r.fleeP=null;go(r,r.watchP.x,r.watchP.y,1.06);
+          return;
+        }
+        r.watchP=null;
         r.fleeT=(r.fleeT||0)-dt;
         var G=r.fleeP;
         if(!G||r.fleeT<=0||Math.hypot(G.x-r.x,G.y-r.y)<r.u*.6||!S.clear(G.x,G.y,r.u)||
            Math.hypot(G.x-c.x,G.y-c.y)<Math.hypot(G.x-r.x,G.y-r.y)*.9){
-          r.fleeP=X.fleeFrom(r,c)||r.fleeP;r.fleeT=rand(.9,1.4);
+          r.fleeP=X.fleeFrom(r,c,s.rs)||r.fleeP;r.fleeT=rand(.9,1.4);
         }
         /* さいごのほうは にげる子が つかれてくる */
         if(r.fleeP)go(r,r.fleeP.x,r.fleeP.y,s.t>26?1.36:1.42);
