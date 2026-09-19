@@ -137,7 +137,7 @@ function reform(s,c,R){
     var order=byAngle(s.m,cc2);
     ringSpots(cc2,n,R).forEach(function(p,i){order[i].spot=p;});
   }
-  s.m.forEach(function(a){if(alive(s,a)){a.hold=false;go(a,a.spot.x,a.spot.y,1.15);}});
+  s.m.forEach(function(a){if(alive(s,a)){a.hold=false;go(a,a.spot.x,a.spot.y,1.6);}});
 }
 /* ひろった子が「ここで つづけよう」「ちょっと とおくから」などを きめる */
 function afterFetch(s,f,F){
@@ -441,11 +441,11 @@ var ACT={
           }
           return;
         }
-        if(!R.back&&R.t>.7)afterFetch(s,R.a,R);
+        if(!R.back&&R.t>.45)afterFetch(s,R.a,R);
         if(R.back){
           B.x=R.a.x+R.a.dir*R.a.u*.55;B.y=R.a.y;
-          var done2=R.back===true?arrived(R.a):s.m.every(function(a){return !alive(s,a)||arrived(a);});
-          if(done2||R.t>9){
+          var done2=arrived(R.a);
+          if(done2||R.t>3.5){
             s.m.forEach(function(a){if(alive(s,a))a.hold=true;});
             s.h=R.a;s.wait=.6;s.fetch=null;
             if(R.a!==R.missed&&alive(s,R.missed))s.nextRecv=R.missed;}
@@ -472,10 +472,10 @@ var ACT={
           }
         }else{
           F.t+=dt;
-          if(F.t>.6&&!F.back)afterFetch(s,f,F);
+          if(F.t>.4&&!F.back)afterFetch(s,f,F);
           if(F.back){B.x=f.x+f.dir*f.u*.55;B.y=f.y;
-            var done3=F.back===true?arrived(f):s.m.every(function(a){return !alive(s,a)||arrived(a);});
-            if(done3||F.t>9){s.m.forEach(function(a){if(alive(s,a))a.hold=true;});B.x=f.x+f.dir*f.u*.55;B.y=f.y;s.h=f;s.wait=.5;
+            var done3=arrived(f);
+            if(done3||F.t>3.5){s.m.forEach(function(a){if(alive(s,a))a.hold=true;});B.x=f.x+f.dir*f.u*.55;B.y=f.y;s.h=f;s.wait=.5;
               /* なかまが とってあげたときは、まず とりそこねた子へ パス */
               if(f!==F.missed&&alive(s,F.missed))s.nextRecv=F.missed;
               s.fetch=null;}}
@@ -937,6 +937,11 @@ X.ACT=ACT;
 X.h={go:go,arrived:arrived,faceTo:faceTo,next:next,once:once,alive:alive,tapLine:tapLine,goodbye:goodbye,fx:fx,weighted:weighted};
 /* にげる先をさがす（ふえおに からも つかう） */
 X.fleeFrom=function(r,c){return pickFlee({flee:r.fleeP},r,c);};
+/* その子が x のところまで 何秒で 行けるか（ならぶのに 間に合うかの 見つもり） */
+X.canReach=function(a,x,secs){
+  var m=a.sp.motion,base=a.u*(m==="hop"?2.0:m==="waddle"?1.25:1.55)*1.5;
+  return Math.abs(x-a.x)/Math.max(1,base)<secs;
+};
 X.tick=function(s,dt){
   if(P.sessions.indexOf(s)<0)return;
   s.t+=dt;s.tt+=dt;
@@ -1054,7 +1059,7 @@ function spectate(dt){
           a.leaving=true;a.tx=a.x<S.W/2?-a.u*3:S.W+a.u*3;a.ty=a.y;
         }else a.galI=null;   /* シートに 入れない子は その場で 見る */
       });
-    }else s.galT=P.now+2;
+    }else s.galT=P.now+.4;
   }
   /* あとから 見にきた子（あそびから ぬけた子など）にも 席をわりあてる */
   if(s.gal&&s.seats){
@@ -1095,7 +1100,10 @@ function spectate(dt){
       a.hold=true;a.moving=false;a.tx=a.x;a.ty=a.y;a.rest=1;a.mult=1;a.z=0;a.vz=0;
       return;
     }else if(a.keepOut){a.watchMove=true;a.galSet=false;return;}
-    /* シートが しけないときも、その場に立って あそびの方を見る（うごかない） */
+    /* シートが まだ できていない あいだは、ふだんどおり 歩いていてよい
+       （その場で きょろきょろ しない） */
+    if(!s.gal){a.watchMove=true;a.galSet=false;a.hold=false;return;}
+    /* 席が ないときは、その場に立って あそびの方を見る（うごかない） */
     a.watchMove=false;a.tx=a.x;a.ty=a.y;a.rest=Math.max(a.rest,.6);a.mult=1;a.hold=true;a.moving=false;
     if(!a.galSet){a.galSet=true;if(Math.abs(cx-a.x)>a.u*.5){a.face=cx>a.x?1:-1;a.dir=a.face;}}
   });
@@ -1142,6 +1150,12 @@ X.schedule=function(dt){
       if(g.lanes&&X.laneRoom){
         var bigU=avail.slice(0,n).reduce(function(v,a){return Math.max(v,a.u);},P.U);
         n=Math.min(n,X.laneRoom(bigU,g.minK)*(g.ranks||1)+(g.ranks>1?1:0));
+        /* スタート位置まで 間に合う子だけを さそう（とちゅうで 見るがわに ならないように） */
+        var lead=avail[0],cx0=0;avail.forEach(function(a){cx0+=a.x;});cx0/=avail.length;
+        var startX=type==="daruma"?(lead.x<S.W/2?S.W-bigU*1.4:bigU*1.4)
+                                  :(cx0<S.W/2?bigU*1.3:S.W-bigU*1.3);
+        var able=avail.filter(function(a){return a===lead||X.canReach(a,startX,9.5);});
+        if(able.length>=4)avail=able;else return;
       }
       if(g.even)n-=n%2;
       /* ひと休みが終わっている子から先に入れる */

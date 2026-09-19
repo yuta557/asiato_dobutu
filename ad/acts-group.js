@@ -390,11 +390,12 @@ ACT.tug={
       var settling=(s.tie&&s.tt>s.tieAt)||s.tt>16;
       /* 逆転：おされている チームが 本気を出して ぐいっと 引きもどす */
       if(!settling){
-        s.rallyT=(s.rallyT==null?rand(3.5,6):s.rallyT)-dt;
+        s.rallyT=(s.rallyT==null?rand(5,8):s.rallyT)-dt;
         if(s.rallyT<=0){
-          s.rallyT=rand(5,8);
+          s.rallyT=rand(6,9);
           var losing=s.o>0?s.L:s.R;
-          if(Math.abs(s.o)>u*.55&&!s.rally&&Math.random()<.85){
+          if(Math.abs(s.o)>u*.7&&!s.rally&&(s.rallies||0)<1&&Math.random()<.6){
+            s.rallies=(s.rallies||0)+1;
             s.rally={team:losing,t:rand(2.2,3)};
             P.say(losing[0],pick(["ここからだ〜！","まだまだ〜！","いっせーの、それ！"]),1.5);
             P.note(losing[0].x,P.headY(losing[0])-8,"ぐぐぐ…","#E9A93B");
@@ -415,7 +416,7 @@ ACT.tug={
       }else{
         /* なかなか決まらないときは だんだん かたむきを強くして 決着をつける */
         var push=s.tt>9?(s.tt-9)*.8:0;
-        s.o+=(force*u*.9+(Math.sin(s.t*.8+s.wave)*.6+s.lean*(1+push))*u*.55)*dt;
+        s.o+=(force*u*.9+(Math.sin(s.t*.8+s.wave)*.42+s.lean*(1+push))*u*.55)*dt;
       }
       /* つなを 引いている間は ほとんど その場なので、あしが 高速で うごいて見えないよう ゆっくりめに */
       track(1.25);
