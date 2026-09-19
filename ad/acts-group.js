@@ -16,7 +16,7 @@ function lanes(n,x0,x1,u,minK){
   /* いちばん手前は 見ている子の ブルーシート用に あけておく */
   var top=S.top+u*.3,bot=S.bottom-u*2.1,c=[],cNoBush=[];
   for(var i=0;i<=28;i++){
-    var y=top+(bot-top)*i/28;if(!S.laneOK(y,x0,x1,u))continue;
+    var y=top+(bot-top)*i/28;if(!S.laneOK(y,x0,x1,u,true))continue;
     c.push(y);
     /* しげみにかくれない高さ（しげみの手前を通る＝しげみより下、または しげみの絵より上） */
     var ok=true,lo=Math.min(x0,x1),hi=Math.max(x0,x1);
@@ -38,13 +38,32 @@ function lanes(n,x0,x1,u,minK){
       for(k=1;k<list.length&&picked.length<n;k++)if(list[k]-picked[picked.length-1]>=gap)picked.push(list[k]);
       if(picked.length>=n){
         var span=picked[n-1]-picked[0],room=(list[list.length-1]-list[0])-span,out=picked.slice(0,n).map(function(y){return y+room/2;});
-        if(out.every(function(y){return S.laneOK(y,x0,x1,u);}))return out;
+        if(out.every(function(y){return S.laneOK(y,x0,x1,u,true);}))return out;
         return picked.slice(0,n);
       }
     }
     return null;
   }
-  var res=greedy(cNoBush)||greedy(c);
+  /* まず、つかえる 高さいっぱいに 等間かくで ならべてみる（ぎゅうぎゅうに つめない） */
+  function spread(){
+    if(n<=0)return null;
+    if(n===1)return [(top+bot)/2];
+    if((bot-top)/(n-1)<MIN)return null;
+    var out=[],i,k;
+    for(i=0;i<n;i++){
+      var y0=top+(bot-top)*i/(n-1),y=y0,found=S.laneOK(y0,x0,x1,u,true);
+      for(var d=1;!found&&d<=12;d++){
+        if(S.laneOK(y0+d*u*.18,x0,x1,u,true)){y=y0+d*u*.18;found=true;}
+        else if(S.laneOK(y0-d*u*.18,x0,x1,u,true)){y=y0-d*u*.18;found=true;}
+      }
+      if(!found)return null;
+      out.push(y);
+    }
+    out.sort(function(p2,q2){return p2-q2;});
+    for(k=1;k<out.length;k++)if(out[k]-out[k-1]<MIN)return null;
+    return out;
+  }
+  var res=spread()||greedy(cNoBush)||greedy(c);
   if(res)return res;
   /* n本とれないときは、とれるだけ かえす（あまった子は 見るがわに まわる） */
   var src=c.length?c:[top,bot],pick2=[src[0]];
@@ -369,6 +388,27 @@ ACT.tug={
       if(s.wave==null){s.wave=rand(0,PI*2);s.lean=pick([-1,1])*rand(.25,.45);s.tie=Math.random()<.22;s.tieAt=rand(6.5,9.5);}
       var force=power(s.R)-power(s.L);
       var settling=(s.tie&&s.tt>s.tieAt)||s.tt>16;
+      /* 逆転：おされている チームが 本気を出して ぐいっと 引きもどす */
+      if(!settling){
+        s.rallyT=(s.rallyT==null?rand(3.5,6):s.rallyT)-dt;
+        if(s.rallyT<=0){
+          s.rallyT=rand(5,8);
+          var losing=s.o>0?s.L:s.R;
+          if(Math.abs(s.o)>u*.55&&!s.rally&&Math.random()<.85){
+            s.rally={team:losing,t:rand(2.2,3)};
+            P.say(losing[0],pick(["ここからだ〜！","まだまだ〜！","いっせーの、それ！"]),1.5);
+            P.note(losing[0].x,P.headY(losing[0])-8,"ぐぐぐ…","#E9A93B");
+            var other=losing===s.L?s.R:s.L;
+            P.later(.9,function(){if(alive(s,other[0]))P.say(other[0],pick(["おっとっと！","まけないぞ〜！","うわ、つよい！"]),1.3);});
+          }
+        }
+        if(s.rally){
+          s.rally.t-=dt;
+          s.o+=(s.rally.team===s.L?-1:1)*u*1.2*dt;
+          s.m.forEach(function(a){a.shake=Math.sin(P.now*26+a.seed)*a.u*.05;});
+          if(s.rally.t<=0)s.rally=null;
+        }
+      }
       if(settling){
         s.o+=(-s.o*2+force*u*.1)*dt;
         if(once(s,"even"))P.note(s.c.x,s.c.y-u*1.15,"まんなか！",AD.INK);

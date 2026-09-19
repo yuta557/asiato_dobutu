@@ -41,10 +41,12 @@ S.clear=function(x,y,u){
   return true;
 };
 /* みんなで横にならぶ あそび用：その高さの横一線が、池や案内の文字にかからないか（しげみは前後に重なるだけなのでよい） */
-S.laneOK=function(y,x0,x1,u){
+S.laneOK=function(y,x0,x1,u,wet){
   var a=Math.min(x0,x1),b=Math.max(x0,x1);
   for(var x=a;x<=b;x+=u*.6){
-    if(S.inPond(x,y,1.25))return false;
+    /* あそび中は 水の中も 走れる（ぱしゃぱしゃ して おそくなるだけ）ので、
+       コースを とるときは 池を よけなくてよい */
+    if(!wet&&S.inPond(x,y,1.25))return false;
     var o={l:x-1.1*u,r:x+1.1*u,t:y-2.6*u,b:y+.25*u};
     for(var j=0;j<S.textRects.length;j++)if(overlap(o,S.textRects[j]))return false;
   }
