@@ -230,11 +230,13 @@ function runDemo(dt){
     showCursor(p.x,p.y);walk(dw,p,true);
     if(u>=1){finish(dw);demo.phase="wait";demo.t0=now;}
   }else if(demo.phase==="wait"&&el>3){
+    /* タップの 回数を かえて、シマウマ（2回）と ウマ（1回）を かわりばんこに 見せる */
+    demo.taps=demo.flip?1:2;
     demo.tap={x:W*(demo.flip?.72:.28),y:H*AD.rand(.56,.66)};demo.from=demo.V[0];demo.phase="move";demo.t0=now;
-    setTip("「2回タップ」すると…",true);
+    setTip("「"+demo.taps+"回タップ」すると…",true);
   }else if(demo.phase==="move"){
     var v=AD.ease(clamp(el/.8,0,1));showCursor(demo.from.x+(demo.tap.x-demo.from.x)*v,demo.from.y+(demo.tap.y-demo.from.y)*v);
-    if(v>=1){demo.phase="tap1";demo.t0=now;tapCursor();tapAt(demo.tap,true);}
+    if(v>=1){tapCursor();tapAt(demo.tap,true);demo.t0=now;demo.phase=demo.taps===1?"rest":"tap1";}
   }else if(demo.phase==="tap1"&&el>.28){tapCursor();tapAt(demo.tap,true);demo.phase="rest";demo.t0=now;}
 }
 
