@@ -367,10 +367,22 @@ function drawCell(key){
   var g=m.c.getContext("2d");g.setTransform(r,0,0,r,0,0);g.__pats=null;
   var tall={foot1:1,hand0:1,hand1:1}[key],u=m.sp.kind==="hand"?(tall?25:28):(tall?27:31);
   var a={sp:m.sp,u:u,z:0,vz:0,moving:false,ph:0,seed:1,dir:1,deco:1,talk:0,sleep:false,blink:0,nod:0};
-  g.save();g.globalAlpha=met[key]?1:.14;
   /* 図鑑の小さな絵は 画面そのままの こまかさで描く（ボードの こまかさとは べつ） */
   var keepR=AD.R;AD.R=r;
-  g.translate(m.sp.kind==="hand"?w*.46:w*.5,h-4);m.sp.draw(g,a,0);g.restore();
+  var tx=m.sp.kind==="hand"?w*.46:w*.5,ty=h-4;
+  if(met[key]){
+    g.save();g.translate(tx,ty);m.sp.draw(g,a,0);g.restore();
+  }else{
+    /* まだ 会っていない子は「かげ（シルエット）」で 見せる。
+       いちど 絵を かいて、その かたちだけを 一色で ぬりつぶす */
+    var off=document.createElement("canvas");off.width=m.c.width;off.height=m.c.height;
+    var og=off.getContext("2d");og.setTransform(r,0,0,r,0,0);og.__pats=null;
+    og.save();og.translate(tx,ty);m.sp.draw(og,a,0);og.restore();
+    og.setTransform(1,0,0,1,0,0);
+    og.globalCompositeOperation="source-in";
+    og.fillStyle="#AFC5D3";og.fillRect(0,0,off.width,off.height);
+    g.save();g.setTransform(1,0,0,1,0,0);g.drawImage(off,0,0);g.restore();
+  }
   AD.R=keepR;
   if(met[key]){m.li.classList.add("met");m.nm.textContent=m.sp.name;reveal(m);}
   document.getElementById("count").textContent=Object.keys(met).length+" / 12";
