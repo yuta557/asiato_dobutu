@@ -69,6 +69,33 @@ function fx(s,cool){if(P.now-(s.fxT==null?-99:s.fxT)>cool){s.fxT=P.now;return tr
 
 /* おにから遠く、しげみ・文字にかぶらず、今の進む向きに近い場所をえらぶ */
 /* にげる先をえらぶ。others＝ほかの にげる子（おなじ すみに かたまらないように はなれる） */
+/* ぎょうれつの ならぶ場所。よこに まっすぐ ならべない（はしに ついた）ときは、
+   そこから 上か下に つづけて ならぶ */
+function queueSpots(s,L,ax,ay){
+  var list=s.m.slice(1),pts=[],px=ax,py=ay;
+  var mx=L.u*1.15,my0=S.top+L.u*.25,my1=S.bottom-L.u*.15,vy=0,vx2=0;
+  for(var i=0;i<list.length;i++){
+    var f=list[i],gap=((i?list[i-1].u:L.u)+f.u)*1.05;
+    /* うしろへ 一歩。たては 見た目が つまって 見えるので、
+       たて・よこ どちらでも おなじ あきに なるように そろえる */
+    var dxs=-s.hx,dys=-s.hy*.6,dl2=Math.hypot(dxs,dys*1.3)||1;
+    var nx=px+dxs/dl2*gap,ny=py+dys/dl2*gap;
+    if(nx<mx||nx>S.W-mx){
+      /* よこの はしに ついた：そこから 上か下に つづける */
+      if(!vy)vy=py<(my0+my1)/2?1:-1;
+      nx=px;ny=py+vy*gap*.95;
+      if(ny<my0||ny>my1){vy=-vy;ny=py+vy*gap*.95;nx=clamp(px+(px<S.W/2?1:-1)*gap*.9,mx,S.W-mx);}
+    }else if(ny<my0||ny>my1){
+      /* たての はしに ついた：そこから 左か右に つづける */
+      if(!vx2)vx2=px<S.W/2?1:-1;
+      ny=py;nx=px+vx2*gap*.9;
+      if(nx<mx||nx>S.W-mx){vx2=-vx2;nx=px+vx2*gap*.9;}
+    }
+    nx=clamp(nx,mx,S.W-mx);ny=clamp(ny,my0,my1);
+    pts.push({x:nx,y:ny});px=nx;py=ny;
+  }
+  return pts;
+}
 function pickFlee(s,r,c,others){
   var base=Math.atan2(r.y-c.y,r.x-c.x),prev=s.flee?Math.atan2(s.flee.y-r.y,s.flee.x-r.x):base,best=null,bs=-1e9;
   [0,.5,-.5,1,-1,1.5,-1.5,2.1,-2.1,2.7,-2.7].forEach(function(o){
@@ -760,10 +787,8 @@ var ACT={
         go(L,L.x+sx,L.y+sy,1.2);L.hold=false;s.leadMove=true;
       }
       s.hx=dx/dl;s.hy=dy/dl;
-      var k=0;
-      s.m.slice(1).forEach(function(f,i){
-        k+=((i?s.m[i].u:L.u)+f.u)*1.05;
-        var q=P.unhidePoint(L.tx-s.hx*k,L.ty-s.hy*k*.6,f.u);go(f,q.x,q.y,1.6);
+      queueSpots(s,L,L.tx,L.ty).forEach(function(q,i){
+        var f=s.m[i+1],p2=P.unhidePoint(q.x,q.y,f.u);go(f,p2.x,p2.y,1.6);
       });
       P.say(L,"ならんで〜！",1.2);},
     update:function(s,dt){var L=s.m[0];
@@ -772,11 +797,10 @@ var ACT={
         if(s.leadMove&&arrived(L)){s.leadMove=false;L.hold=true;}
         /* 「うん」と こたえた子が ぜんぶ 先頭の すぐうしろに ならぶまで 出発しない。
            席は 先頭の いまの ばしょから 計算しなおす（先頭が うごいても ずれない） */
-        var kk=0;
-        s.m.slice(1).forEach(function(f,i){
-          kk+=((i?s.m[i].u:L.u)+f.u)*1.05;
-          var q=P.unhidePoint(L.x-s.hx*kk,L.y-s.hy*kk*.6,f.u);
-          if(Math.hypot(q.x-f.tx,q.y-f.ty)>f.u*.2)go(f,q.x,q.y,1.6);
+        queueSpots(s,L,L.x,L.y).forEach(function(q,i){
+          var f=s.m[i+1];if(!f)return;
+          var p2=P.unhidePoint(q.x,q.y,f.u);
+          if(Math.hypot(p2.x-f.tx,p2.y-f.ty)>f.u*.2)go(f,p2.x,p2.y,1.6);
         });
         function atSlot(f,k){return Math.hypot(f.tx-f.x,f.ty-f.y)<f.u*(k||.42);}
         var ready=!s.leadMove&&s.m.slice(1).every(function(f){return atSlot(f);});
@@ -1075,7 +1099,8 @@ function drawMat(g,s){
   var u=s.matU||P.U,rows=(s.seats&&s.seats.length>G.n)?2:1;
   var w=(G.n-1)*G.gap+u*(rows>1?3.8:3.2);
   /* たてよこの ひりつは のばしてよい（ならぶ列が 2つのときは たてに のばす） */
-  var h=Math.max(w*(159/426),u*(rows>1?2.7:1.8));
+  /* たては これくらいで じゅうぶん（まえは 2ばい ちかく あった） */
+  var h=Math.max(w*(159/426)*.62,u*(rows>1?1.55:1.05));
   var cx=G.x0+G.gap*(G.n-1)/2+(rows>1?G.gap*.25:0),by=G.y+u*.55;
   if(MAT.complete&&MAT.naturalWidth)g.drawImage(MAT,cx-w/2,by-h,w,h);
   /* ざぶとん（ひとり1まいでは なく、シートに 2〜4まい） */
@@ -1196,7 +1221,7 @@ function spectate(dt){
       s.mat={y:0,draw:function(g){drawMat(g,s);}};
       s.props=s.props||[];s.props.push(s.mat);P.props.push(s.mat);
     }
-    s.mat.y=s.gal.y-(s.matU||P.U)*1.6;
+    s.mat.y=s.gal.y-(s.matU||P.U)*1;
   }
   var cx=0;s.m.forEach(function(m){cx+=m.x;});cx/=s.m.length;
   fans.forEach(function(a){

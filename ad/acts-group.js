@@ -14,7 +14,7 @@ function addProp(s,pr){s.props=s.props||[];s.props.push(pr);P.props.push(pr);}
 function lanes(n,x0,x1,u,minK){
   /* いちばん手前は 見ている子が ならぶ場所として あけておく */
   /* いちばん手前は 見ている子の ブルーシート用に あけておく */
-  var top=S.top+u*.3,bot=S.bottom-u*2.1,c=[],cNoBush=[];
+  var top=S.top+u*.3,bot=S.bottom-u*2.4,c=[],cNoBush=[];
   for(var i=0;i<=28;i++){
     var y=top+(bot-top)*i/28;if(!S.laneOK(y,x0,x1,u,true))continue;
     c.push(y);
@@ -38,7 +38,7 @@ function lanes(n,x0,x1,u,minK){
       for(k=1;k<list.length&&picked.length<n;k++)if(list[k]-picked[picked.length-1]>=gap)picked.push(list[k]);
       if(picked.length>=n){
         var span=picked[n-1]-picked[0],room=(list[list.length-1]-list[0])-span,out=picked.slice(0,n).map(function(y){return y+room/2;});
-        if(out.every(function(y){return S.laneOK(y,x0,x1,u,true);}))return out;
+        if(out.every(function(y){return y<=bot&&y>=top&&S.laneOK(y,x0,x1,u,true);}))return out;
         return picked.slice(0,n);
       }
     }
@@ -52,9 +52,11 @@ function lanes(n,x0,x1,u,minK){
     var out=[],i,k;
     for(i=0;i<n;i++){
       var y0=top+(bot-top)*i/(n-1),y=y0,found=S.laneOK(y0,x0,x1,u,true);
+      /* コースは 手前の 見物スペースより 下に はみ出さない */
       for(var d=1;!found&&d<=12;d++){
-        if(S.laneOK(y0+d*u*.18,x0,x1,u,true)){y=y0+d*u*.18;found=true;}
-        else if(S.laneOK(y0-d*u*.18,x0,x1,u,true)){y=y0-d*u*.18;found=true;}
+        var yd=y0+d*u*.18,yu=y0-d*u*.18;
+        if(yd<=bot&&S.laneOK(yd,x0,x1,u,true)){y=yd;found=true;}
+        else if(yu>=top&&S.laneOK(yu,x0,x1,u,true)){y=yu;found=true;}
       }
       if(!found)return null;
       out.push(y);
