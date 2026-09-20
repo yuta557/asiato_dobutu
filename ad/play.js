@@ -253,6 +253,15 @@ function bushStepOut(a,dt){
      おし出すと よーいどんの コースから はずれて 止まってしまう */
   if(a.sess)return;
   var b=P.bushHidden(a);if(!b)return;
+  /* 歩いて とおりすぎる だけなら そのまま 通す（毎フレーム じりじり おし出すと
+     その場で 足ぶみ しているように 見える）。行き先が しげみの中なら そこだけ ずらす */
+  if(a.moving&&!a.hold){
+    if(!a.bushOut||P.now-a.bushOut>1.5){
+      a.bushOut=P.now;
+      var q0=P.unhidePoint(a.tx,a.ty,a.u);a.tx=q0.x;a.ty=q0.y;
+    }
+    return;
+  }
   var hw=b.img.w*.5+a.u*.25,dx=a.x-b.x;
   var left=-hw-dx,right=hw-dx,down=(b.y+4)-a.y;
   var mv=Math.abs(left)<Math.abs(right)?left:right;
@@ -350,7 +359,19 @@ function stepAnimal(a,dt){
   }else a.edgeS=0;
   /* うえ・したの はしも おなじ */
   var edgeY=a.y<=S.top+a.u*.2?-1:(a.y>=S.bottom-a.u*.1?1:0);
-  if(edgeY&&(a.ty-a.y)*edgeY>0&&!a.leaving&&!a.sess){a.ty=clamp(a.ty,S.top+a.u*.6,S.bottom-a.u*.4);}
+  if(edgeY&&(a.ty-a.y)*edgeY>0&&!a.leaving&&!a.sess){
+    a.ty=clamp(a.ty,S.top+a.u*.6,S.bottom-a.u*.4);
+    /* ふちに はりついたまま 足だけ うごかさないよう、しばらく つづいたら
+       草原の 内がわへ 行き先を えらびなおす */
+    a.edgeYT=(a.edgeYT||0)+dt;
+    if(a.edgeYT>.5&&!a.chat&&!a.watch&&!a.helping&&!a.hold){
+      a.edgeYT=0;
+      var qy=P.farSpot(a);
+      a.tx=qy.x;a.ty=clamp(qy.y,S.top+a.u*.9,S.bottom-a.u*.7);
+      if((a.ty-a.y)*edgeY>-a.u*.5)a.ty=clamp(a.y-edgeY*a.u*2.5,S.top+a.u*.9,S.bottom-a.u*.7);
+      a.rest=0;
+    }
+  }else a.edgeYT=0;
   var dx=a.tx-a.x,dy=a.ty-a.y,d=Math.hypot(dx,dy);
   if(a.bumpStun>0){a.bumpStun-=dt;a.shake=a.bumpStun>0?Math.sin(P.now*26)*a.u*.05:0;}
   var wants=d>a.u*.25&&(a.rest<=0||a.sess||a.leaving)&&!a.hold&&!a.sleep&&!(a.bumpStun>0);

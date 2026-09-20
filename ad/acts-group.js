@@ -584,7 +584,7 @@ ACT.oni={
     if(s.st===1){
       /* おには できるだけ ちがう子を おいかける（だんごに ならないように） */
       if(!s.aimT||P.now>s.aimT||s.onis.some(function(c){return !c.aim||s.rs.indexOf(c.aim)<0;})){
-        s.aimT=P.now+rand(1.4,2.4);
+        s.aimT=P.now+rand(1.8,2.8);
         var free=s.rs.slice();
         s.onis.slice().sort(function(p,q){
           var dp=Math.min.apply(null,s.rs.map(function(r){return AD.dist(p,r);}).concat([1e9]));
@@ -644,10 +644,25 @@ ACT.oni={
           /* すぐ となりに ほかの おにが いるときは、まず はなれる */
           var nearO=null,nd=1e9;
           s.onis.forEach(function(o){if(o===c)return;var d2=AD.dist(c,o);if(d2<nd){nd=d2;nearO=o;}});
-          if(nearO&&nd<(c.u+nearO.u)*.95){
-            var ax2=c.x-nearO.x,ay2=(c.y-nearO.y)*1.3,al=Math.hypot(ax2,ay2)||1;
-            go(c,c.x+ax2/al*c.u*2.2,c.y+ay2/al*c.u*1.1,1.5);
-          }else go(c,gx+px,gy+py,1.58);
+          if((nearO&&nd<(c.u+nearO.u)*.95)||(c.pushT||0)>P.now){
+            /* おに同士が ぶつかりそうな ときは、いちど はなれる 向きを きめて
+               0.6秒は そのまま すすむ（毎フレーム きめなおすと ふらふらする） */
+            if((c.pushT||0)<=P.now){
+              var ax2=c.x-nearO.x,ay2=(c.y-nearO.y)*1.3,al=Math.hypot(ax2,ay2)||1;
+              c.pushT=P.now+.6;c.gox=null;
+              c.pushX=clamp(c.x+ax2/al*c.u*2.6,c.u,S.W-c.u);
+              c.pushY=clamp(c.y+ay2/al*c.u*1.3,S.top,S.bottom);
+            }
+            go(c,c.pushX,c.pushY,1.5);
+          }else{
+            /* あいての いまの 場所は そのまま おいかけ、
+               「先まわり」や「おに同士の よけ」の ぶんだけ なめらかに する
+               （ここが こまかく 切りかわると 行っては もどる 動きに なる） */
+            var ox=gx+px-t.x,oy=gy+py-t.y,kk3=Math.min(1,dt*5);
+            if(c.gox==null||Math.hypot(ox-c.gox,oy-c.goy)>c.u*5){c.gox=ox;c.goy=oy;}
+            else{c.gox+=(ox-c.gox)*kk3;c.goy+=(oy-c.goy)*kk3;}
+            go(c,t.x+c.gox,t.y+c.goy,1.58);
+          }
         }
         /* おいかけている子だけでなく、すぐそばに 来た子は だれでも タッチ
            （体が かさなるほど 近づいたら、まだ はやくても タッチしたことにする） */
@@ -677,7 +692,10 @@ ACT.oni={
         var G=r.fleeP;
         if(!G||r.fleeT<=0||Math.hypot(G.x-r.x,G.y-r.y)<r.u*.6||!S.clear(G.x,G.y,r.u)||
            Math.hypot(G.x-c.x,G.y-c.y)<Math.hypot(G.x-r.x,G.y-r.y)*.9){
-          r.fleeP=X.fleeFrom(r,c,s.rs)||r.fleeP;r.fleeT=rand(.9,1.4);
+          var np=X.fleeFrom(r,c,s.rs);
+          /* いまの にげ先と ほとんど おなじなら そのまま（こまかい 切りかえを へらす） */
+          if(np&&(!r.fleeP||Math.hypot(np.x-r.fleeP.x,np.y-r.fleeP.y)>r.u*.8))r.fleeP=np;
+          r.fleeT=rand(1.4,2.1);
         }
         /* さいごのほうは にげる子が つかれてくる */
         if(r.fleeP)go(r,r.fleeP.x,r.fleeP.y,s.t>26?1.36:1.42);
