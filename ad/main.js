@@ -128,7 +128,7 @@ function finish(w){
 function born(a,byUser,how){
   var first=!met[a.sp.key];met[a.sp.key]=true;
   if(first)markCell(a.sp.key);
-  if(byUser){demoStopped=true;userMade=true;setTip("「"+how+"」で、"+a.sp.name+"がうまれた！ タップするとあいさつします");}
+  if(byUser){demoStopped=true;if(!userMade)madeAt=P.now;userMade=true;setTip("「"+how+"」で、"+a.sp.name+"がうまれた！ タップするとあいさつします");}
 }
 function stampHand(p,demo,key){
   var sp=SPK[key],a=P.spawn(sp,p.x,p.y+P.U*.7,"stamp",1);
@@ -212,7 +212,9 @@ function runDemo(dt){
   if(X.watching&&X.watching()){if(demo.phase!=="idle")abortDemo();return;}
   if(P.reduced){staticGuide(dt||0);return;}
   var now=P.now,el=now-demo.t0;
-  if(now-lastUser<=1.8||down){if(demo.phase!=="idle")abortDemo();return;}
+  if(now-lastUser<=1.8||down){if(demo.phase!=="idle")abortDemo();if(petG.phase!=="idle")petStop(now,true);return;}
+  /* 「タップすると こたえてくれる」の 案内（うんだあと、まだ タップして いないとき） */
+  if(runPetGuide(now))return;
   /* 最後の「〇〇で、〇〇！」は、どうぶつが増えても見せきってから終える */
   if(demo.phase==="rest"){if(el>4.5){curEl.style.opacity="0";demo.phase="idle";if(tipIsDemo)setTip(TIP0);}return;}
   if(demoStopped||P.animals.length>=Math.max(2,P.MAX-1)){if(demo.phase!=="idle")abortDemo();return;}
@@ -234,6 +236,71 @@ function runDemo(dt){
     var v=AD.ease(clamp(el/.8,0,1));showCursor(demo.from.x+(demo.tap.x-demo.from.x)*v,demo.from.y+(demo.tap.y-demo.from.y)*v);
     if(v>=1){demo.phase="tap1";demo.t0=now;tapCursor();tapAt(demo.tap,true);}
   }else if(demo.phase==="tap1"&&el>.28){tapCursor();tapAt(demo.tap,true);demo.phase="rest";demo.t0=now;}
+}
+
+/* どうぶつを タップしたときの こたえ（ゆびでも、案内のカーソルでも おなじ） */
+function tapAnimal(a,fromX){
+  /* あそんでいる子は、そのあそびの中だけの反応 */
+  if(a.sess&&X.onTap(a))return;
+  /* あそびがおわってすぐは、ふりかえりのことば */
+  if(X.onTapAfter(a))return;
+  /* みんなのあそびを 見まもっている子 */
+  if(X.onTapWatch(a))return;
+  /* おしゃべり中にタップされたら、話をやめて タップにこたえる */
+  if(a.chat&&AD.chat)AD.chat.stop();
+  if(a.hidden){P.say(a,"しーっ！",1.1);return;}
+  /* 続けてタップしている間は同じあいさつ。間があいたら別のあいさつにする */
+  if(!a.tapLine||P.now-a.lastTap>1.6){
+    var lines=a.sp.tap.filter(function(s){return s!==a.tapLine;});
+    a.tapLine=pick(lines.length?lines:a.sp.tap);
+  }
+  a.lastTap=P.now;
+  P.say(a,a.tapLine,1.5);P.jump(a,4.2);a.dir=fromX<a.x?-1:1;if(!a.sess)a.rest=1.2;
+}
+
+/* ---- 「どうぶつを タップすると こたえてくれる」の 案内 ----
+   じぶんで どうぶつを うんでから 30びょう たっても、まだ どうぶつを タップして
+   いないときに、黄色い カーソルで タップして 見せる */
+var tappedAnimal=false,madeAt=-1e9,petG={phase:"idle",t0:0,a:null,from:null,twice:false},petGaveT=-1e9;
+function petTarget(){
+  var best=null,bd=1e9;
+  P.animals.forEach(function(a){
+    if(a.hidden||a.leaving||a.age<1.5)return;
+    var d=Math.hypot(a.x-W*.5,a.y-H*.55)+(a.sess?W*.3:0);
+    if(d<bd){bd=d;best=a;}
+  });
+  return best;
+}
+function petPoint(a){return {x:a.x,y:AD.clamp(P.headY(a)+a.u*.9,20,H-20)};}
+function petStop(now,wait){
+  petG.phase="idle";petG.a=null;petG.twice=false;
+  if(wait)petGaveT=now;
+  curEl.style.opacity="0";if(tipIsDemo)setTip(TIP0);
+}
+function runPetGuide(now){
+  if(petG.phase==="idle"){
+    if(tappedAnimal||!userMade||P.bye||P.reduced)return false;
+    if(now-madeAt<30||now-petGaveT<30)return false;
+    var a0=petTarget();if(!a0)return false;
+    petG.a=a0;petG.phase="move";petG.t0=now;petG.twice=false;
+    var p0=petPoint(a0);
+    petG.from={x:AD.clamp(p0.x+(p0.x<W/2?-1:1)*W*.14,20,W-20),y:AD.clamp(p0.y-H*.12,20,H-20)};
+    setTip("どうぶつを タップすると、おへんじ してくれるよ",true);
+    return true;
+  }
+  var a=petG.a,el=now-petG.t0;
+  if(!a||P.animals.indexOf(a)<0||a.leaving){petStop(now,true);return false;}
+  var tp=petPoint(a);
+  if(petG.phase==="move"){
+    var v=AD.ease(clamp(el/.9,0,1));
+    showCursor(petG.from.x+(tp.x-petG.from.x)*v,petG.from.y+(tp.y-petG.from.y)*v);
+    if(v>=1){petG.phase="tap";petG.t0=now;tapCursor();tapAnimal(a,tp.x);}
+    return true;
+  }
+  showCursor(tp.x,tp.y);
+  if(el>1.1&&!petG.twice){petG.twice=true;tapCursor();tapAnimal(a,tp.x);}
+  if(el>2.8)petStop(now,true);
+  return true;
 }
 
 /* ---- 入力 ---- */
@@ -277,25 +344,7 @@ function up(){
   if(downOnBall){var B=P.hitBall(downPos);if(B&&X.onTapBall(B))return;}
   if(downOnAnimal){
     var a=P.hit(downPos);
-    if(a){
-      /* あそんでいる子は、そのあそびの中だけの反応 */
-      if(a.sess&&X.onTap(a))return;
-      /* あそびがおわってすぐは、ふりかえりのことば */
-      if(X.onTapAfter(a))return;
-      /* みんなのあそびを 見まもっている子 */
-      if(X.onTapWatch(a))return;
-      /* おしゃべり中にタップされたら、話をやめて タップにこたえる */
-      if(a.chat&&AD.chat)AD.chat.stop();
-      if(a.hidden){P.say(a,"しーっ！",1.1);return;}
-      /* 続けてタップしている間は同じあいさつ。間があいたら別のあいさつにする */
-      if(!a.tapLine||P.now-a.lastTap>1.6){
-        var lines=a.sp.tap.filter(function(s){return s!==a.tapLine;});
-        a.tapLine=pick(lines.length?lines:a.sp.tap);
-      }
-      a.lastTap=P.now;
-      P.say(a,a.tapLine,1.5);P.jump(a,4.2);a.dir=downPos.x<a.x?-1:1;if(!a.sess)a.rest=1.2;
-      return;
-    }
+    if(a){tappedAnimal=true;tapAnimal(a,downPos.x);return;}
   }
   tapAt(downPos,false);
 }
