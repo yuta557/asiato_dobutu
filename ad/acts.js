@@ -959,7 +959,7 @@ ACT.mizu={
    なにが始まるのか分かるように、動き出す前に かならず
    ① さそう子が「〇〇、しよう！」 ② なかまが こたえる ③ それから場所へ行って はじめる */
 var PLAY_NAME={tag:"おいかけっこ",ball:"ボールあそび",hide:"かくれんぼ",dance:"ダンス",mizu:"みずあび",parade:"ぎょうれつ",
-  daruma:"だるまさんがころんだ",race:"よーいどん",tug:"つなひき"};
+  daruma:"だるまさんがころんだ",race:"よーいどん",tug:"つなひき",oni:"ふえおに"};
 X.PLAY_NAME=PLAY_NAME;
 var REPLY=["いいよ〜！","やろう、やろう！","うん、あそぼ！"];
 X.start=function(type,m,quiet){
@@ -1028,7 +1028,7 @@ X.tick=function(s,dt){
 X.onTap=function(a){
   var s=a.sess;if(!s||P.sessions.indexOf(s)<0||!ACT[s.type].tap)return false;
   /* さそっている間：これから なにをするのか を言う */
-  if(s.prep){tapLine(a,"prep"+s.type,["これから "+PLAY_NAME[s.type]+" するの！","はやく はじめよう！"]);return true;}
+  if(s.prep){tapLine(a,"prep"+s.type,["これから "+(PLAY_NAME[s.type]||"あそび")+" するの！","はやく はじめよう！"]);return true;}
   ACT[s.type].tap(s,a);s.talkT=Math.max(s.talkT||0,1.8);
   return true;
 };
