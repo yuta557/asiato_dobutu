@@ -395,7 +395,9 @@ function stepAnimal(a,dt){
     var px0=a.x,py0=a.y;
     move();
     var moved0=Math.hypot(a.x-px0,a.y-py0);
-    if(moved0>a.u*.004)a.ph+=dt*(m==="waddle"?5:Math.min(speed/a.u,2.4)*2.6);
+    /* あしの うごきは「じっさいに すすんだ 長さ」に あわせる。
+       ふさがれて あまり すすめないのに あしだけ 高速で うごく、を なくす */
+    if(moved0>a.u*.004)a.ph+=Math.min(moved0/a.u,dt*2.4)*(m==="waddle"?4:2.6);
     else a.moving=false;
   }
   if(!wants&&a.face&&a.face!==a.dir&&P.now-(a.dirT||-9)>.6){a.dir=a.face;a.dirT=P.now;}
