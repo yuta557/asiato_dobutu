@@ -132,8 +132,12 @@ ACT.daruma={
       var row=i%ys.length,rank=Math.floor(i/ys.length);
       p.lane=ys[row];p.rank=rank;
       p.startX=clamp(sx+away*rank*u*1.7,u*1.2,S.W-u*1.2);
-      go(p,p.startX,p.lane,1.5);
+      /* スタートが とおい子は かけ足で むかう */
+      var far2=Math.abs(p.startX-p.x)>p.u*7;
+      go(p,p.startX,p.lane,far2?2.1:1.5);
+      if(far2&&!s.hurry)s.hurry=p;
     });
+    if(s.hurry)P.later(.5,function(){if(alive(s,s.hurry)&&s.st===0)P.say(s.hurry,"いそげ〜！",1.3);});
     P.say(oni,"わたしが おにね！",1.3);
   },
   update:function(s,dt){
@@ -258,7 +262,15 @@ ACT.race={
     s.x0=cx<S.W/2?u*1.3:S.W-u*1.3;s.x1=cx<S.W/2?S.W-u*1.3:u*1.3;
     var order=s.m.slice().sort(function(p,q){return p.y-q.y;});
     var ys=fitLanes(s,order,s.x0,s.x1,u,1.1);
-    order.forEach(function(a,i){a.lane=ys[i];go(a,s.x0,ys[i],1.5);});
+    var hurry=null;
+    order.forEach(function(a,i){
+      a.lane=ys[i];
+      /* スタートが とおい子は かけ足で むかう */
+      var far=Math.abs(s.x0-a.x)>a.u*7;
+      go(a,s.x0,ys[i],far?2.1:1.5);
+      if(far&&!hurry)hurry=a;
+    });
+    if(hurry)P.later(.5,function(){if(alive(s,hurry)&&s.st===0)P.say(hurry,"いそげ〜！",1.3);});
     s.order=[];
     var gx=s.x1,top=Math.min.apply(null,ys)-u*.4,bot=Math.max.apply(null,ys)+u*.4;
     addProp(s,{y:S.top-5,draw:function(g){

@@ -893,7 +893,10 @@ var ACT={
           if(!P.free(a)||a.chat)return false;
           var vx=a.x-tail.x,vy=(a.y-tail.y)*1.2,d=Math.hypot(vx,vy);
           if(d>P.U*7||d<P.U*.6)return false;
-          return (vx*-hx+vy*-hy)/d>.3;
+          /* うしろに いて（前に まわりこまない）、よこにも ずれすぎていない子だけ。
+             列を よこぎって 入ってくると じゃまに なる */
+          var back=vx*-hx+vy*-hy,side=Math.abs(vx*-hy+vy*hx);
+          return back>P.U*.8&&back/d>.62&&side<P.U*2.2;
         }).sort(function(p,q){return AD.dist(tail,p)-AD.dist(tail,q);})[0];
         if(g){
           g.sess=s;g.rest=0;g.hold=false;g.face=0;g.catchT=3;g.watch=null;g.watchMove=false;g.galI=null;
