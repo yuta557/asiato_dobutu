@@ -86,10 +86,12 @@ function finish(s){
   C.s=null;cool=rand(5,10);
   if(s.play&&stillOK(a)&&stillOK(b)&&!P.sessions.length){X.start(s.play,[a,b],true);return;}
   if(s.together&&stillOK(a)&&stillOK(b)){
-    /* ふたりで おなじほうへ。ならんで あるけるよう、すこしずらす */
+    /* ふたりで おなじほうへ。ならんで あるけるよう、すこしずらす。
+       そのあとも しばらくは、行き先を そろえて いっしょに あるく */
     var p=P.roomySpot(a),d=(a.u+b.u)*.7;
     go(a,p.x-d*.5,p.y);go(b,p.x+d*.5,p.y+2);
     a.rest=0;b.rest=0;
+    C.walk.push({a:a,b:b,off:d,until:P.now+rand(7,11)});
   }else{a.rest=rand(.2,1);b.rest=rand(.2,1);}
 }
 function step(s,dt){
@@ -144,8 +146,28 @@ function scriptFor(a,b){
   }
   return weighted(TALK.map(function(sc){return [sc,sc.w];}));
 }
+/* おしゃべりの あと「いっしょに いこう」と なった ふたり。
+   しばらくは 行き先を そろえて、ならんで あるく */
+C.walk=[];
+function stepWalk(){
+  for(var i=C.walk.length-1;i>=0;i--){
+    var w=C.walk[i],A=w.a,B=w.b;
+    if(P.now>w.until||!stillOK(A)||!stillOK(B)||A.chat||B.chat||A.sess||B.sess){B.mult=1;C.walk.splice(i,1);continue;}
+    /* ついていく子は、あいての となりを めざす。
+       はなれて しまったら まず あいてに 追いつき、ならんだら おなじ 行き先へ */
+    var far=Math.hypot(A.x-B.x,(A.y-B.y)*1.3)>(A.u+B.u)*.8;
+    var gx=far?A.x:A.tx,gy=far?A.y:A.ty;
+    B.tx=AD.clamp(gx+w.off,B.u,S.W-B.u);
+    B.ty=AD.clamp(gy+2,S.top,S.bottom);
+    B.mult=far?1.2:1;
+    if(B.rest>0)B.rest=0;
+    if(A.rest>0)A.rest=0;
+    B.hold=false;A.hold=false;
+  }
+}
 C.tick=function(dt){
-  if(P.bye){if(C.s)C.stop();return;}
+  if(P.bye){C.walk.length=0;if(C.s)C.stop();return;}
+  stepWalk();
   P.animals.forEach(function(a){if(a.chatCool>0)a.chatCool-=dt;});
   if(C.s){step(C.s,dt);return;}
   /* どこかで あそびが はじまっているときは、ほかの子は おしゃべりしない（あそびの じゃまをしない） */
