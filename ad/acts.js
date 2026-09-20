@@ -1282,7 +1282,9 @@ X.onTapWatch=function(a){
   /* ボールをひろってあげている子 */
   if(a.helping&&P.sessions.indexOf(a.helping)>=0){tapLine(a,"helpBall",["ボール、とってあげるの","まかせて！"]);return true;}
   if(!a.watch||P.sessions.indexOf(a.watch)<0)return false;
-  tapLine(a,"watch",["いま みんなで あそんでるの","みてるだけ〜","つぎは いっしょに あそびたいな"]);P.jump(a,3);
+  tapLine(a,"watch",["みんなを おうえん してるの","ここから みてるね","どっちが かつかな〜","つぎは いっしょに あそびたいな"]);
+  /* すわって 見ている子は はねない（ざぶとんから うごかない） */
+  if(!a.galSet)P.jump(a,3);
   return true;
 };
 X.schedule=function(dt){
