@@ -1202,7 +1202,7 @@ function spectate(dt){
     s.seats.forEach(function(a){
       if(a.galGave||a.galI==null||fans.indexOf(a)<0)return;
       var gi=clamp(a.galI,0,s.gal.n*2-1),col=gi%s.gal.n,row=Math.floor(gi/s.gal.n);
-      var qx=s.gal.x0+s.gal.gap*col+(row?s.gal.gap*.5:0),qy=s.gal.y-row*a.u*1.15;
+      var qx=s.gal.x0+s.gal.gap*col+(row?s.gal.gap*.5:0),qy=s.gal.y+a.u*.3-row*a.u*1.15;
       comingN++;
       if(Math.hypot(a.x-qx,(a.y-qy)*1.3)<a.u*3)nearN++;
     });
@@ -1229,7 +1229,8 @@ function spectate(dt){
     var G=(a.galI==null?null:s.gal);
     if(G){
       var gi=clamp(a.galI==null?0:a.galI,0,G.n*2-1),col=gi%G.n,row=Math.floor(gi/G.n);
-      var sx=G.x0+G.gap*col+(row?G.gap*.5:0),sy=G.y-row*a.u*1.15;
+      /* ざぶとんの 上に すわって 見えるよう、すこし 下に */
+      var sx=G.x0+G.gap*col+(row?G.gap*.5:0),sy=G.y+a.u*.3-row*a.u*1.15;
       var sd=Math.hypot(a.x-sx,(a.y-sy)*1.3);
       if(sd>a.u*.45){
         /* ちゃんと すすめているか 見ておく。ふさがれて 進めないまま だと
@@ -1342,7 +1343,7 @@ X.schedule=function(dt){
         var lead=avail[0],cx0=0;avail.forEach(function(a){cx0+=a.x;});cx0/=avail.length;
         var startX=type==="daruma"?(lead.x<S.W/2?S.W-bigU*1.4:bigU*1.4)
                                   :(cx0<S.W/2?bigU*1.3:S.W-bigU*1.3);
-        var able=avail.filter(function(a){return a===lead||X.canReach(a,startX,9.5);});
+        var able=avail.filter(function(a){return a===lead||X.canReach(a,startX,13);});
         if(able.length>=4)avail=able;else return;
       }
       if(g.even)n-=n%2;

@@ -141,7 +141,7 @@ ACT.daruma={
     if(s.st===0){
       /* ならび終わった子から、おにの ほうを 向いて まつ（うしろ向きのままに しない） */
       (s.players||[]).forEach(function(p){if(arrived(p)){p.face=-s.side;p.dir=-s.side;}});
-      if(allThere(s,null,12)){
+      if(allThere(s,null,15)){
         lineUp(s,s.sx,oni);oni.x=s.ox;oni.y=s.oy;
         if(s.players.length<1)return true;
         s.m.forEach(function(a){a.hold=true;});
@@ -257,7 +257,7 @@ ACT.race={
     /* みんながいる側からスタートして、反対側がゴール */
     s.x0=cx<S.W/2?u*1.3:S.W-u*1.3;s.x1=cx<S.W/2?S.W-u*1.3:u*1.3;
     var order=s.m.slice().sort(function(p,q){return p.y-q.y;});
-    var ys=fitLanes(s,order,s.x0,s.x1,u);
+    var ys=fitLanes(s,order,s.x0,s.x1,u,1.1);
     order.forEach(function(a,i){a.lane=ys[i];go(a,s.x0,ys[i],1.5);});
     s.order=[];
     var gx=s.x1,top=Math.min.apply(null,ys)-u*.4,bot=Math.max.apply(null,ys)+u*.4;
@@ -276,7 +276,7 @@ ACT.race={
     if(s.st===0){
       /* スタートに ついた子から、ゴールの ほうを 向いて まつ（うしろ向きのままに しない） */
       s.m.forEach(function(a){if(arrived(a)){a.face=dirX;a.dir=dirX;}});
-      if(allThere(s,null,12)){
+      if(allThere(s,null,15)){
         lineUp(s,s.x0);
         if(s.m.length<2)return true;
         s.m.forEach(function(a){a.hold=true;a.face=dirX;a.dir=dirX;});next(s);}
@@ -730,7 +730,7 @@ function catchIt(s,c,t){
   P.later(.5,function(){if(alive(s,t))P.say(t,pick(["つかまった〜、おにに なっちゃった","いっしょに おにだ〜"]),1.5);});
 }
 /* みんなであそぶ あそびの一覧（4ひき以上いるときに えらばれる） */
-X.GROUP={daruma:{max:9,weight:1.2,lanes:true,minK:1.02,ranks:2},race:{max:7,weight:1.2,lanes:true},tug:{max:8,weight:1,even:true},oni:{max:8,weight:1.4}};
+X.GROUP={daruma:{max:9,weight:1.2,lanes:true,minK:1.02,ranks:2},race:{max:7,weight:1.2,lanes:true,minK:1.1},tug:{max:8,weight:1,even:true},oni:{max:8,weight:1.4}};
 X.AFTER.daruma=["そーっと うごくの、むずかしい","ころんだ！って ドキッとした","つぎは おにを やりたいな"];
 X.AFTER.race=["いっぱい はしった〜","つぎは もっと はやく はしるぞ","あしが まだ はしってる"];
 X.AFTER.tug=["うでが つかれた〜","よいしょ、よいしょ、したね","つぎは ぜったい かつぞ"];
