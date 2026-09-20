@@ -712,6 +712,24 @@ ACT.oni={
           P.note(who2.x,P.headY(who2)-6,"ビューン","#E9A93B");
         }
       }
+      /* とちゅうで うまれた子も まぜてあげる（あそんでいない子なら だれでも） */
+      s.joinT=(s.joinT==null?rand(2,3.5):s.joinT)-dt;
+      if(s.joinT<=0){
+        s.joinT=rand(2.5,4);
+        if(s.m.length<10&&s.t<ONI_SEC-8){
+          var newby=P.animals.filter(function(a){return P.free(a)&&!a.chat&&!a.watch&&!a.helping;})
+            .sort(function(p,q){return p.age-q.age;})[0];      /* うまれたての子から */
+          if(newby){
+            newby.sess=s;newby.rest=0;newby.hold=false;newby.face=0;newby.even=rand(.92,1.1);
+            newby.aim=null;newby.fleeP=null;newby.watchP=null;
+            s.rs.push(newby);s.m.push(newby);
+            P.say(newby,pick(["ぼくも まぜて〜！","わたしも やりたい！","いれて いれて〜"]),1.5);
+            P.jump(newby,3.4);
+            var oniA=s.onis[0];
+            P.later(.8,function(){if(alive(s,oniA))P.say(oniA,pick(["いいよ〜、にげて にげて！","じゃあ つかまえちゃうぞ〜"]),1.4);});
+          }
+        }
+      }
       /* のこり時間を にげる子が 知らせる */
       var left2=Math.ceil(ONI_SEC-s.t);
       if(left2<=10&&s.rs.length&&once(s,"left10")){P.say(pick(s.rs),"のこり 10びょう！",1.5);s.talkT=Math.max(s.talkT,1.6);}
