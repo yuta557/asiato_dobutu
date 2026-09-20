@@ -54,12 +54,20 @@ function begin(a,b,sc){
   C.s=s;
   [a,b].forEach(function(x){x.chat=s;x.chatSeek=null;x.mult=1;x.rest=0;x.hold=false;});
   /* かさなったまま 話さないよう、まず きちんと はなれて 向かいあう */
-  var mid={x:(a.x+b.x)/2,y:(a.y+b.y)/2},gap=(a.u+b.u)*.95;
+  var mid={x:(a.x+b.x)/2,y:(a.y+b.y)/2},gap=(P.halfW(a)+P.halfW(b))*1.08;
   var L=a.x<=b.x?a:b,R=L===a?b:a;
-  var lx=AD.clamp(mid.x-gap/2,L.u*1.2,S.W-L.u*1.2),rx=AD.clamp(mid.x+gap/2,R.u*1.2,S.W-R.u*1.2);
-  var ly=AD.clamp(mid.y-2,S.top+L.u*.4,S.bottom-L.u*.2),ry=AD.clamp(mid.y+2,S.top+R.u*.4,S.bottom-R.u*.2);
-  if(!S.clear(lx,ly,L.u)){lx=L.x;ly=L.y;}
-  if(!S.clear(rx,ry,R.u)){rx=R.x;ry=R.y;}
+  /* 立つ場所が しげみ などで だめなときは、もう少し はなれた ところを さがす */
+  function spot(who,dir){
+    for(var k=0;k<6;k++){
+      var g2=gap*(1+k*.14);
+      var x=AD.clamp(mid.x+dir*g2/2,who.u*1.2,S.W-who.u*1.2);
+      var y=AD.clamp(mid.y+dir*2,S.top+who.u*.4,S.bottom-who.u*.2);
+      if(S.clear(x,y,who.u))return {x:x,y:y};
+    }
+    return null;
+  }
+  var pL=spot(L,-1),pR=spot(R,1);
+  var lx=pL?pL.x:L.x,ly=pL?pL.y:L.y,rx=pR?pR.x:R.x,ry=pR?pR.y:R.y;
   go(L,lx,ly,1.35);go(R,rx,ry,1.35);
   faceTo(L,R);faceTo(R,L);
   return s;
@@ -90,9 +98,12 @@ function step(s,dt){
   /* はなれて 向かいあうまでは 話しださない */
   if(!s.ready){
     s.t+=dt;
-    var far=Math.hypot(a.x-b.x,(a.y-b.y)*1.4),want=(a.u+b.u)*.8;
+    /* 向かいあって あいさつ するので、体（絵の はば）が かさならない ところまで はなれる */
+    var apart=Math.abs(a.x-b.x)>(P.halfW(a)+P.halfW(b))*.98;
     var placed=(Math.hypot(a.tx-a.x,a.ty-a.y)<a.u*.35&&Math.hypot(b.tx-b.x,b.ty-b.y)<b.u*.35);
-    if((placed&&far>want)||s.t>2){
+    /* かさなったままでは 話しださない。どうしても はなれられない ときは やめる */
+    if(s.t>4&&!apart){C.stop();return;}
+    if(apart&&(placed||s.t>1.6)){
       s.ready=true;s.t=0;
       a.hold=true;b.hold=true;a.rest=1;b.rest=1;
       faceTo(a,b);faceTo(b,a);

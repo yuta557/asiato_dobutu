@@ -65,6 +65,31 @@ P.say=function(a,text,dur,chorus){
   a.talk=.45;
 };
 P.note=function(x,y,text,col){P.notes.push({x:x,y:y,text:text,born:P.now,dur:1.3,col:col||AD.INK});};
+/* その どうぶつの 絵の よこはば（半分）。手形の子は はねを 広げるので u より ずっと 広い。
+   いちど はかったら おぼえておく */
+var WIDE={};
+P.halfW=function(a){
+  var k=a.sp.key;
+  if(WIDE[k]==null){
+    var u=40,cw=Math.ceil(u*7),ch=Math.ceil(u*6),half=1;
+    try{
+      var cv=document.createElement("canvas");cv.width=cw;cv.height=ch;
+      var g=cv.getContext("2d");g.__pats=null;
+      var keepR=AD.R;AD.R=1;
+      var t={sp:a.sp,u:u,z:0,vz:0,moving:false,ph:0,seed:1,dir:1,deco:1,talk:0,sleep:false,blink:0,nod:0,alpha:1};
+      g.save();g.translate(cw/2,ch*.82);a.sp.draw(g,t,0);g.restore();
+      AD.R=keepR;
+      var d=g.getImageData(0,0,cw,ch).data,minX=cw,maxX=-1;
+      for(var y=0;y<ch;y++){
+        var row=y*cw;
+        for(var x=0;x<cw;x++)if(d[(row+x)*4+3]>16){if(x<minX)minX=x;if(x>maxX)maxX=x;}
+      }
+      if(maxX>=minX)half=Math.max(cw/2-minX,maxX-cw/2)/u;
+    }catch(e){half=1;}
+    WIDE[k]=clamp(half,.8,2.4);
+  }
+  return WIDE[k]*a.u;
+};
 P.headY=function(a){return a.y-a.z-a.u*(a.sp.top||TOP[a.sp.key]||(a.sp.kind==="hand"?1.95:2.15));};
 P.jump=function(a,k){if(a.z===0&&a.vz===0)a.vz=a.u*(k||4);};
 /* うまれてすぐ（3秒）は、あそびにさそわない（「〇〇だよ！」の名のりを さいごまで見せる） */
