@@ -393,6 +393,8 @@ function stepAnimal(a,dt){
     if(hit){
       /* おしのけるのではなく、かさなる ほうへ（また 池の上へ）は そもそも 進まない。
          たてだけ・よこだけ なら 進めるときは すべるように よける */
+      /* ほかの子に ふさがれて よこすべり している あいだは、足を 空回り させない */
+      if(hit!=="pond")a.slideBlock=P.now;
       if(canStep(a,a.x,ny)){nx=a.x;}
       else if(canStep(a,nx,a.y)){ny=a.y;}
       else{
@@ -443,7 +445,10 @@ function stepAnimal(a,dt){
     var moved0=Math.hypot(a.x-px0,a.y-py0);
     /* あしの うごきは「じっさいに すすんだ 長さ」に あわせる。
        ふさがれて あまり すすめないのに あしだけ 高速で うごく、を なくす */
-    if(moved0>a.u*.004)a.ph+=Math.min(moved0/a.u,dt*2.4)*(m==="waddle"?4:2.6);
+    /* おされている ときは、ほんの すこし うごいただけでは 足を うごかさない
+       （おし合いで 足が 空回り して 見えるのを ふせぐ） */
+    var pushed=P.now-(a.pushT||-9)<dt*2.5||P.now-(a.slideBlock||-9)<dt*1.5;
+    if(moved0>a.u*(pushed?.02:.004))a.ph+=Math.min(moved0/a.u,dt*2.4)*(m==="waddle"?4:2.6);
     else a.moving=false;
   }
   if(!wants&&a.face&&a.face!==a.dir&&P.now-(a.dirT||-9)>.6){a.dir=a.face;a.dirT=P.now;}
@@ -507,7 +512,11 @@ function unstack(a,b,dt){
   var axn=a.x+s*move*.5*wa,bxn=b.x-s*move*.5*wb;
   if(!pondBlock(a,axn,a.y))a.x=axn;
   if(!pondBlock(b,bxn,b.y))b.x=bxn;
-
+  /* おし合いに なっている あいだは 足を うごかさない。
+     しばらく つづいたら、はなれた ところへ 行き先を かえる */
+  a.pushT=P.now;b.pushT=P.now;
+  if(!a.sess&&!a.leaving){a.bump=(a.bump||0)+dt*1.4;a.bumpBy=b;}
+  if(!b.sess&&!b.leaving){b.bump=(b.bump||0)+dt*1.4;b.bumpBy=a;}
 }
 
 P.update=function(dt){
