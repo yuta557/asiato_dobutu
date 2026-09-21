@@ -189,7 +189,16 @@ ACT.daruma={
     if(s.phase==="look"){
       if(!s.checked&&s.pt<1.3){
         s.checked=true;
-        var mover=s.forced&&!s.forced.caught?s.forced:(Math.random()<.35?pick(active):null);
+        var mover=s.forced&&!s.forced.caught?s.forced:null;
+        if(!mover&&active.length){
+          /* おにに 近い（前に 出ている）子ほど はやく うごいていて 止まりにくいので、
+             「うごいた」と 言われる かくりつを 高くする */
+          var span=Math.max(u,Math.abs(S.W-u*2.9));
+          var frac=function(p){return clamp(Math.abs(p.x-s.ox)/span,0,1);};
+          var fmin=Math.min.apply(null,active.map(frac));
+          if(Math.random()<.32+.26*(1-fmin))
+            mover=weighted(active.map(function(p){return [p,.5+2.2*Math.pow(1-frac(p),1.5)];}));
+        }
         s.forced=null;
         if(mover)catchOne(s,mover);
         else if(active.length&&Math.random()<.7){
@@ -359,11 +368,16 @@ ACT.race={
         var kick=(a===leadA&&frac>=.68)?1.2:1;
         go(a,s.x1+dirX*a.u*.6,a.lane,a.spd*chase*kick*(a.boost>0?1.5:1)*(a.slow>0?.72:1));
         if((a.x-s.x1)*dirX>-a.u*.06){
-          a.done=true;a.hold=true;s.order.push(a);
+          a.done=true;a.hold=true;a.doneT=s.tt;s.order.push(a);
           var place=s.order.length;
           if(place===1){P.say(a,"いちばん！",1.4);P.jump(a,4.6);P.note(a.x,P.headY(a)-8,"★","#E9A93B");}
           else if(place===2)P.say(a,"2ばん！",1.1);
-          else P.say(a,pick(["ゴール！","ついた〜"]),1.1);
+          else{
+            /* いちばん さいごで、ひとつ前の子から だいぶ おくれて ついたときだけ */
+            var prevA=s.order[place-2],gapT=(prevA&&prevA.doneT!=null)?s.tt-prevA.doneT:0;
+            if(place>=s.m.length&&gapT>1.1)P.say(a,pick(["やっと ついた〜","はあ、やっと ゴール〜"]),1.5);
+            else P.say(a,pick(["ゴール！","ついた〜"]),1.1);
+          }
         }
       });
       if(s.m.every(function(a){return a.done;})||s.tt>20){
@@ -749,13 +763,24 @@ ACT.oni={
         if(Math.random()<.5&&s.rs.length)P.say(pick(s.rs),pick(["にげろ〜","こっちだよ〜","つかまらないぞ〜"]),1.2);
         else P.say(pick(s.onis),pick(["まてまて〜","つかまえるぞ〜","そっちに いった！"]),1.2);
       }
-      if(s.rs.length<=1||s.t-(s.runT0||0)>ONI_SEC){
+      /* おわるのは「ぜんいん つかまえた」か「30びょう たった」ときだけ。
+         のこり1人に なっても、まだ つづく */
+      if(!s.rs.length||s.t-(s.runT0||0)>ONI_SEC){
         s.m.forEach(function(a){a.hold=true;a.aim=null;});
-        var last=s.rs[0];
-        if(last){P.say(last,"さいごまで にげきった〜！",1.6);P.jump(last,4.6);
-          P.later(.7,function(){if(alive(s,oni0))P.say(oni0,"つよいなあ〜",1.3);});}
-        else{P.say(oni0,"みんな つかまえた！",1.5);s.onis.forEach(function(c){P.jump(c,3.4);});}
-        s.win=last;next(s);
+        if(!s.rs.length){
+          /* ぜんいん つかまえた：さいしょの おにが ひとこと */
+          P.say(oni0,pick(["みんな つかまえた〜！","ぜんいん つかまえたぞ〜！","さいごまで つかまえきった！"]),1.6);
+          s.onis.forEach(function(c){P.jump(c,3.4);});
+          s.win=null;
+        }else{
+          /* 30びょう にげきった子だけが「にげきった」と 言える */
+          var last=pick(s.rs);
+          P.say(last,"さいごまで にげきった〜！",1.6);P.jump(last,4.6);
+          s.rs.forEach(function(r){if(r!==last)P.jump(r,3.2);});
+          P.later(.7,function(){if(alive(s,oni0))P.say(oni0,"つよいなあ〜",1.3);});
+          s.win=last;
+        }
+        next(s);
       }
       return;
     }

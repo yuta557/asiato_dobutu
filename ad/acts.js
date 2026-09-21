@@ -1050,7 +1050,7 @@ X.start=function(type,m,quiet){
   m.forEach(function(a){a.sess=s;a.rest=0;a.face=0;a.hold=true;});
   P.sessions.push(s);
   /* おしゃべりから はじまるときは、もう さそいあったあとなので すぐ はじめる */
-  if(quiet){s.prep=null;m.forEach(function(a){a.hold=false;a.face=0;});ACT[type].init(s);return s;}
+  if(quiet){s.prep=null;m.forEach(function(a){a.hold=false;a.face=0;});ACT[type].init(s);hurryFar(s);return s;}
   var inv=m[0],name=PLAY_NAME[type]||"あそび";
   P.say(inv,(m.length>=3?"みんなで "+name:name)+"、しよう！",1.6);P.jump(inv,3.2);
   m.forEach(function(a){if(a!==inv)faceTo(a,inv);});
@@ -1069,6 +1069,7 @@ function tickPrep(s,dt){
     s.prep=null;s.flag={};s.t=0;s.tt=0;
     s.m.forEach(function(a){a.hold=false;a.face=0;});
     ACT[s.type].init(s);
+    hurryFar(s);
   }
 }
 X.end=function(s){
@@ -1104,6 +1105,16 @@ X.canReach=function(a,x,secs){
   var m=a.sp.motion,base=a.u*(m==="hop"?2.0:m==="waddle"?1.25:1.55)*1.5;
   return Math.abs(x-a.x)/Math.max(1,base)<secs;
 };
+/* あそびが きまったのに もちばが 遠い子は、すこし 早足で むかう（ひとこと 言うことも）*/
+var HURRY=["いそげ〜","いま いくよ〜","まってー！"];
+function hurryFar(s){
+  var far=s.m.filter(function(a){return Math.hypot(a.tx-a.x,a.ty-a.y)>a.u*4.5;});
+  far.forEach(function(a){a.hurryT=P.now+7;});
+  if(far.length&&Math.random()<.75){
+    var who=pick(far);
+    P.later(rand(.25,.8),function(){if(alive(s,who))P.say(who,pick(HURRY),1.2);});
+  }
+}
 X.tick=function(s,dt){
   if(P.sessions.indexOf(s)<0)return;
   s.t+=dt;s.tt+=dt;
@@ -1112,6 +1123,12 @@ X.tick=function(s,dt){
   if(s.m.some(function(a){return a.leaving||P.animals.indexOf(a)<0;})){X.end(s);return;}
   if(s.prep){tickPrep(s,dt);return;}
   if(ACT[s.type].update(s,dt)===true)X.end(s);
+  /* あそびの 指示（go）の あとで、遠い子だけ 早足に する */
+  s.m.forEach(function(a){
+    if(!a.hurryT||P.now>a.hurryT){a.hurryT=0;return;}
+    if(Math.hypot(a.tx-a.x,a.ty-a.y)>a.u*3)a.mult=(a.mult||1)*1.35;
+    else a.hurryT=0;
+  });
 };
 /* あそんでいる子がタップされた */
 X.onTap=function(a){
@@ -1320,6 +1337,9 @@ function spectate(dt){
           a.seatGoT=P.now+rand(.45,1);
           if(s.st<2&&P.now-(a.watchSaid==null?-99:a.watchSaid)>12&&Math.random()<.6){
             a.watchSaid=P.now;P.say(a,pick(WATCH),1.4);
+            /* ひとこと 言ったときは、ふきだしを 読みおわってから 席に あらわれる
+               （言った とたんに 瞬間移動すると、何を 言ったか 読めない） */
+            a.seatGoT=P.now+1.75;
           }
         }
         if(P.now>=(a.seatGoT||0)){

@@ -157,8 +157,13 @@ function stepWalk(){
        はなれて しまったら まず あいてに 追いつき、ならんだら おなじ 行き先へ */
     var far=Math.hypot(A.x-B.x,(A.y-B.y)*1.3)>(A.u+B.u)*.8;
     var gx=far?A.x:A.tx,gy=far?A.y:A.ty;
-    B.tx=AD.clamp(gx+w.off,B.u,S.W-B.u);
-    B.ty=AD.clamp(gy+2,S.top,S.bottom);
+    /* 進む むきを もとに、よこに ならんで すこし うしろを 歩く。
+       よこに ずらすだけだと、右へ 行くときに ついていく子が 前に 出てしまう */
+    var vx=A.tx-A.x,vy=A.ty-A.y,vl=Math.hypot(vx,vy);
+    var ux=vl>2?vx/vl:(A.dir||1),uy=vl>2?vy/vl:0;
+    if(w.side==null)w.side=((B.x-A.x)*(-uy)+(B.y-A.y)*ux)>=0?1:-1;
+    B.tx=AD.clamp(gx-uy*w.off*w.side-ux*B.u*.55,B.u,S.W-B.u);
+    B.ty=AD.clamp(gy+ux*w.off*.5*w.side-uy*B.u*.35+2,S.top,S.bottom);
     B.mult=far?1.2:1;
     if(B.rest>0)B.rest=0;
     if(A.rest>0)A.rest=0;

@@ -379,6 +379,7 @@ function stepAnimal(a,dt){
   /* おされている あいだは 歩きださない（おし合って 前後に ゆれて 見えるのを ふせぐ）*/
   var shoved=!a.sess&&!a.leaving&&P.now-(a.pushT||-9)<.14;
   var wants=d>a.u*.25&&(a.rest<=0||a.sess||a.leaving)&&!a.hold&&!a.sleep&&!(a.bumpStun>0)&&!shoved;
+  a.wants=wants;   /* 足が 止まって 見えても「進もうとしている」かどうか */
   var m=a.sp.motion,base=a.u*(m==="hop"?2.0:m==="waddle"?1.25:1.55);
   /* かけっこの あそびでは どうぶつによる はやさの ちがいを なくし、
      その回の「ちから」だけで きまるようにする */
@@ -409,7 +410,7 @@ function stepAnimal(a,dt){
         /* まっこうから ぶつかる ときは、たまに こける */
         var hv=hit==="pond"?1:(Math.hypot(hit.tx-hit.x,hit.ty-hit.y)||1);
         var hd=hit==="pond"?0:(v.x*(hit.tx-hit.x)+v.y*(hit.ty-hit.y))/hv;
-        if(hit!=="pond"&&hd<-.5&&a.moving&&hit.moving&&!a.hold&&!hit.hold&&
+        if(hit!=="pond"&&hd<-.5&&a.wants&&hit.wants&&!a.hold&&!hit.hold&&
            P.now-(a.bumpT||-9)>8&&P.now-(hit.bumpT||-9)>8&&Math.random()<dt*.8)stumble(a,hit);
       }
     }
@@ -527,9 +528,9 @@ function unstack(a,b,dt){
   if(a.sess&&a.sess===b.sess)return;          /* なかまどうしは すりぬける */
   if(headOn(a,b)){
     /* 正面から ぶつかる ときは すりぬける。ごくまれに こける */
-    if(a.moving&&b.moving&&!a.sess&&!b.sess&&!a.chat&&!b.chat&&
+    if(a.wants&&b.wants&&!a.sess&&!b.sess&&!a.chat&&!b.chat&&
        Math.hypot(a.x-b.x,(a.y-b.y)*1.5)<(a.u+b.u)*.5&&
-       P.now-(a.bumpT||-9)>10&&P.now-(b.bumpT||-9)>10&&Math.random()<dt*.5)stumble(a,b);
+       P.now-(a.bumpT||-9)>10&&P.now-(b.bumpT||-9)>10&&Math.random()<dt*.6)stumble(a,b);
     return;
   }
   if((a.scatter||0)>0||(b.scatter||0)>0)return;
