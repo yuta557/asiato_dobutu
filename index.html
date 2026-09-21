@@ -17,8 +17,11 @@
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);font-family:"Zen Kaku Gothic New","Hiragino Kaku Gothic ProN","Yu Gothic",Meiryo,sans-serif;font-size:15.5px;line-height:1.8;-webkit-font-smoothing:antialiased}
 .page{max-width:1140px;margin:0 auto;padding:44px 24px 56px;display:flex;flex-direction:column;gap:26px}
-.head{display:grid;grid-template-columns:minmax(0,auto) minmax(0,1fr);gap:6px 40px;align-items:start}
+.head{display:block}
 h1{margin:0;font-family:"Zen Maru Gothic",sans-serif;font-weight:700;font-size:clamp(32px,5.4vw,54px);line-height:1.15;letter-spacing:.02em}
+/* 見出しは 手がきの バナー */
+.banner{margin:0 0 16px}
+.banner img{display:block;width:100%;height:auto;border-radius:18px}
 .lead{margin:0;max-width:36em;font-size:15.5px}
 .lead b{font-weight:500;background:linear-gradient(transparent 62%,var(--wash-yellow) 62%)}
 @media(max-width:760px){.head{grid-template-columns:1fr}.page{padding:30px 14px 44px;gap:22px}}
@@ -154,7 +157,12 @@ h1{margin:0;font-family:"Zen Maru Gothic",sans-serif;font-weight:700;font-size:c
 <body>
 <main class="page">
   <header class="head">
-    <h1>あしあとどうぶつ</h1>
+    <h1 class="banner">
+      <picture>
+        <source media="(min-width:700px)" srcset="img/header-wide.webp">
+        <img src="img/header.webp" alt="あしあとどうぶつ ― 歩いたあとから、どうぶつが生まれる。" width="2000" height="667">
+      </picture>
+    </h1>
     <p class="lead">なぞると足あと、タップすると手形。<b>なぞった形や、タップの回数で、うまれるどうぶつが変わります。</b>さんかくをなぞるとネコ、2回タップするとシマウマ。うまれたどうぶつは草原であそびはじめます。</p>
   </header>
 
