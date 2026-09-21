@@ -362,6 +362,36 @@ function up(){
   tapAt(downPos,false);
 }
 cv.addEventListener("pointerup",up);cv.addEventListener("pointercancel",up);
+/* ---- ボードを 全画面に する ----
+   ブラウザの 全画面が つかえない とき（iPhone や 埋めこみの 画面）は、
+   ページの 上に 画面いっぱいに 広げる やり方に 切りかえる（見た目は おなじ） */
+var fsBtn=document.getElementById("fsBtn");
+var fsGo=board.requestFullscreen||board.webkitRequestFullscreen;
+function fsReal(){return (document.fullscreenElement||document.webkitFullscreenElement)===board;}
+function fsBig(){return board.classList.contains("bigscreen");}
+function bigSet(on){board.classList.toggle("bigscreen",on);document.body.classList.toggle("op-lock",on);}
+function fsSync(){
+  if(fsReal()&&fsBig())bigSet(false);            /* 本物の 全画面が 効いたら 代わりは やめる */
+  if(fsBtn)fsBtn.textContent=(fsReal()||fsBig())?"もとの 大きさ":"ぜんがめん";
+}
+function bigOn(on){bigSet(on);fsSync();}
+if(fsBtn){
+  fsBtn.addEventListener("click",function(){
+    if(fsBig()){bigOn(false);return;}
+    if(fsReal()){var out=document.exitFullscreen||document.webkitExitFullscreen;if(out)out.call(document);return;}
+    if(!fsGo){bigOn(true);return;}
+    var p=null,ng=false;
+    try{p=fsGo.call(board);}catch(err){ng=true;}
+    if(ng){bigOn(true);return;}
+    if(p&&p.then)p.then(fsSync,function(){});
+    /* 返事が こない・ことわられた ときも 大きくする */
+    setTimeout(function(){if(!fsReal()&&!fsBig())bigOn(true);},450);
+  });
+  document.addEventListener("fullscreenchange",fsSync);
+  document.addEventListener("webkitfullscreenchange",fsSync);
+  document.addEventListener("keydown",function(e){if(e.key==="Escape"&&fsBig())bigOn(false);});
+}
+
 /* ---- 「まっさらにする」：すぐ消さずに、みんなで あいさつしてから 帰っていく ---- */
 function wipeNow(){
   P.bye=false;P.clearAll();strokes=[];uw={st:null,last:null,t:0};dw={st:null,last:null,t:0};pending=null;ripples=[];
