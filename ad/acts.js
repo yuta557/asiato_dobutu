@@ -71,6 +71,20 @@ function fx(s,cool){if(P.now-(s.fxT==null?-99:s.fxT)>cool){s.fxT=P.now;return tr
 /* にげる先をえらぶ。others＝ほかの にげる子（おなじ すみに かたまらないように はなれる） */
 /* ぎょうれつの ならぶ場所。よこに まっすぐ ならべない（はしに ついた）ときは、
    そこから 上か下に つづけて ならぶ */
+/* ぎょうれつの 先頭が「もと来た ほう」へ もどろうとする ときは、
+   そのまま 折り返すと じぶんの 列に つっこむので、まず 上か下へ 曲がる */
+function paradeTurn(s,L,p){
+  var hx=0,hy=0,tl=s.trail;
+  if(tl&&tl.length>=2){hx=tl[tl.length-1].x-tl[tl.length-2].x;hy=tl[tl.length-1].y-tl[tl.length-2].y;}
+  if(!hx&&!hy){hx=L.tx-L.x;hy=L.ty-L.y;}
+  var hl=Math.hypot(hx,hy)||1;hx/=hl;hy/=hl;
+  var vx=p.x-L.x,vy=p.y-L.y,vl=Math.hypot(vx,vy)||1;
+  if((vx*hx+vy*hy)/vl>-.2)return null;             /* 折り返しでは ない */
+  var up=L.y-(S.top+L.u*.9),dn=(S.bottom-L.u*.7)-L.y,d=dn>up?1:-1;
+  var step=Math.max(L.u*3,Math.min(Math.max(up,dn),L.u*4.5));
+  return {x:clamp(L.x+hx*L.u*.8,L.u*1.2,S.W-L.u*1.2),
+          y:clamp(L.y+d*step,S.top+L.u*.9,S.bottom-L.u*.7)};
+}
 function queueSpots(s,L,ax,ay){
   var list=s.m.slice(1),pts=[],px=ax,py=ay;
   var mx=L.u*1.15,my0=S.top+L.u*.25,my1=S.bottom-L.u*.15,vy=0,vx2=0;
@@ -834,11 +848,20 @@ var ACT={
       /* 時間が きたら（先頭が つけなくても）おしまい */
       if(s.t>34){P.say(L,"とうちゃく！",1.3);s.m.forEach(function(a){a.hold=true;P.jump(a,3.2);});next(s);return;}
       if(arrived(L)){s.i++;if(s.i>=s.wp.length){P.say(L,"とうちゃく！",1.3);s.m.forEach(function(a){a.hold=true;P.jump(a,3.2);});next(s);return;}
+        /* もどる かたちに なるときは、まず 上か下へ 曲がってから */
+        var turn=paradeTurn(s,L,s.wp[s.i]);
+        if(turn)s.wp.splice(s.i,0,turn);
         go(L,s.wp[s.i].x,s.wp[s.i].y,.9);}
       /* 先頭が すすめなくなったら、つぎの ばしょへ */
       if(Math.hypot(L.x-(s.lx==null?L.x-99:s.lx),L.y-(s.ly==null?L.y:s.ly))<L.u*.05){
         s.lt=(s.lt||0)+dt;
-        if(s.lt>2.5){s.lt=0;s.i++;if(s.i>=s.wp.length)s.i=0;var nx2=S.safeSpot(L.u*1.2,s.wp[s.i])||S.randomSpot(L.u*2);s.wp[s.i]=nx2;go(L,nx2.x,nx2.y,.95);}
+        if(s.lt>2.5){
+          s.lt=0;s.i++;if(s.i>=s.wp.length)s.i=0;
+          var nx2=S.safeSpot(L.u*1.2,s.wp[s.i])||S.randomSpot(L.u*2);
+          var turn2=paradeTurn(s,L,nx2);
+          s.wp[s.i]=nx2;go(L,(turn2||nx2).x,(turn2||nx2).y,.95);
+          if(turn2)s.wp.splice(s.i,0,turn2);
+        }
       }else{s.lt=0;s.lx=L.x;s.ly=L.y;}
       /* うしろの子は、先頭が通った道をそのままたどる（しげみや文字にかぶらない） */
       s.trail=s.trail||[{x:L.x,y:L.y,c:0}];
@@ -867,26 +890,33 @@ var ACT={
         want+=(s.m[i-1].u+f.u)*1.05;
         if(f.lag>0){f.lag-=dt;f.hold=true;if(f.lag<=0){f.hold=false;f.catchT=2;P.say(f,"まって〜！",1.1);}continue;}
         f.catchT=Math.max(0,(f.catchT||0)-dt);
-        var pt=null,at=s.vpos-want;
+        var pt=null,at=s.vpos-want,lhx=hx,lhy=hy;
         for(var j=s.trail.length-1;j>=0;j--){
           if(s.trail[j].c<=at){
             var q0=s.trail[j],q1=s.trail[Math.min(j+1,s.trail.length-1)],span=(q1.c-q0.c)||1,r0=clamp((at-q0.c)/span,0,1);
-            pt={x:q0.x+(q1.x-q0.x)*r0,y:q0.y+(q1.y-q0.y)*r0};break;
+            pt={x:q0.x+(q1.x-q0.x)*r0,y:q0.y+(q1.y-q0.y)*r0};
+            /* その ばしょでの 道の むき（先頭の いまの むきとは ちがう。
+               曲がった あとでも なめらかに ついていけるように） */
+            var lx=q1.x-q0.x,ly=q1.y-q0.y,ll=Math.hypot(lx,ly);
+            if(ll>.001){lhx=lx/ll;lhy=ly/ll;}
+            break;
           }
         }
         /* 道すじが まだ みじかいときは、いま いちばん うしろの子の さらに うしろへ（横入りしない） */
         var pv=s.m[i-1],gp=(pv.u+f.u)*1.05;
-        if(!pt)pt={x:pv.x-hx*gp,y:pv.y-hy*gp*.6};
-        /* 道すじが カーブしていると 前の子と ならんでしまうので、前の子から すこし はなす */
-        var vx=pt.x-pv.x,vy=pt.y-pv.y,vd=Math.hypot(vx,vy)||1;
-        if(vd<gp*.92){pt={x:pv.x+vx/vd*gp*.92,y:pv.y+vy/vd*gp*.92};}
-        var tp=P.unhidePoint(pt.x,pt.y,f.u);
+        if(!pt)pt={x:pv.x-lhx*gp,y:pv.y-lhy*gp*.6};
+        /* 道すじが カーブしていると 前の子と ならんでしまうので、前の子から すこし はなす
+           （たては 見た目が つまって 見えるので、すこし きつめに みる） */
+        var vx=pt.x-pv.x,vy=pt.y-pv.y,vd=Math.hypot(vx,vy*1.25)||1;
+        if(vd<gp*.92){var kk=gp*.92/vd;pt={x:pv.x+vx*kk,y:pv.y+vy*kk};}
+        /* しげみ よけで 道から はずれると 列が くずれるので、道すじの点を そのまま つかう */
+        var tp=pt;
         /* ちょうど ついていける はやさ：先頭と おなじ はやさ＋おくれたぶん だけ すこし足す。
            ねらう点は すこし前に おいて、止まったり 走ったり しないようにする */
         var fm=f.sp.motion,fbase=f.u*(fm==="hop"?2.0:fm==="waddle"?1.25:1.55);
-        var along=(tp.x-f.x)*hx+(tp.y-f.y)*hy;
+        var along=(tp.x-f.x)*lhx+(tp.y-f.y)*lhy;
         var v=(s.vspd||0)+clamp(along*1.2,-f.u*.9,f.u*1.5)+(f.catchT>0?f.u*1.2:0);
-        go(f,tp.x+hx*f.u*.7,tp.y+hy*f.u*.42,clamp(v/fbase,.05,2.4));
+        go(f,tp.x+lhx*f.u*.7,tp.y+lhy*f.u*.7,clamp(v/fbase,.05,2.4));
       }
       /* 歩いていくうちに、とちゅうの子が どんどん くわわる */
       s.joinT=(s.joinT==null?rand(1.5,3):s.joinT)-dt;

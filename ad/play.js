@@ -374,7 +374,9 @@ function stepAnimal(a,dt){
   }else a.edgeYT=0;
   var dx=a.tx-a.x,dy=a.ty-a.y,d=Math.hypot(dx,dy);
   if(a.bumpStun>0){a.bumpStun-=dt;a.shake=a.bumpStun>0?Math.sin(P.now*26)*a.u*.05:0;}
-  var wants=d>a.u*.25&&(a.rest<=0||a.sess||a.leaving)&&!a.hold&&!a.sleep&&!(a.bumpStun>0);
+  /* おされている あいだは 歩きださない（おし合って 前後に ゆれて 見えるのを ふせぐ）*/
+  var shoved=!a.sess&&!a.leaving&&P.now-(a.pushT||-9)<.14;
+  var wants=d>a.u*.25&&(a.rest<=0||a.sess||a.leaving)&&!a.hold&&!a.sleep&&!(a.bumpStun>0)&&!shoved;
   var m=a.sp.motion,base=a.u*(m==="hop"?2.0:m==="waddle"?1.25:1.55);
   /* かけっこの あそびでは どうぶつによる はやさの ちがいを なくし、
      その回の「ちから」だけで きまるようにする */
@@ -393,8 +395,10 @@ function stepAnimal(a,dt){
     if(hit){
       /* おしのけるのではなく、かさなる ほうへ（また 池の上へ）は そもそも 進まない。
          たてだけ・よこだけ なら 進めるときは すべるように よける */
-      /* ほかの子に ふさがれて よこすべり している あいだは、足を 空回り させない */
-      if(hit!=="pond")a.slideBlock=P.now;
+      /* ふさがれて よこすべり している あいだは、足を 空回り させない。
+         水ぎわは すぐに 気づいて まわり道する（きわを こすりつづけない） */
+      a.slideBlock=P.now;
+      if(hit==="pond")a.pondHit=P.now;
       if(canStep(a,a.x,ny)){nx=a.x;}
       else if(canStep(a,nx,a.y)){ny=a.y;}
       else{
@@ -515,8 +519,8 @@ function unstack(a,b,dt){
   /* おし合いに なっている あいだは 足を うごかさない。
      しばらく つづいたら、はなれた ところへ 行き先を かえる */
   a.pushT=P.now;b.pushT=P.now;
-  if(!a.sess&&!a.leaving){a.bump=(a.bump||0)+dt*1.4;a.bumpBy=b;}
-  if(!b.sess&&!b.leaving){b.bump=(b.bump||0)+dt*1.4;b.bumpBy=a;}
+  if(!a.sess&&!a.leaving){a.bump=(a.bump||0)+dt*2.4;a.bumpBy=b;}
+  if(!b.sess&&!b.leaving){b.bump=(b.bump||0)+dt*2.4;b.bumpBy=a;}
 }
 
 P.update=function(dt){
