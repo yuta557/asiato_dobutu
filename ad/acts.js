@@ -1159,7 +1159,7 @@ function drawMat(g,s){
   /* たてよこの ひりつは のばしてよい（ならぶ列が 2つのときは たてに のばす） */
   /* たては これくらいで じゅうぶん（まえは 2ばい ちかく あった） */
   var h=Math.max(w*(159/426)*.62,u*(rows>1?1.95:1.25));
-  var cx=G.x0+G.gap*(G.n-1)/2+(rows>1?G.gap*.25:0),by=G.y+u*.55;
+  var cx=G.x0+G.gap*(G.n-1)/2+(rows>1?G.gap*.25:0),by=G.y+u*.9;
   if(MAT.complete&&MAT.naturalWidth)g.drawImage(MAT,cx-w/2,by-h,w,h);
   /* ざぶとん（ひとり1まいでは なく、シートに 2〜4まい） */
   var nc=Math.max(2,Math.min(4,Math.round(G.n*rows/2)));
@@ -1291,7 +1291,7 @@ function spectate(dt){
       var mu=s.matU||P.U;
       var sx=G.x0+G.gap*col+(row?G.gap*.5:0),sy=G.y+mu*.5-row*mu*.85;
       var sd=Math.hypot(a.x-sx,(a.y-sy)*1.3);
-      if(sd>a.u*.45){
+      if(sd>a.u*.3){
         /* ちゃんと すすめているか 見ておく。ふさがれて 進めないまま だと
            その場で 小きざみに ゆれて 見えるので、あきらめて そこから 見る */
         if(!a.seatP||Math.hypot(a.x-a.seatP.x,a.y-a.seatP.y)>a.u*.5){a.seatP={x:a.x,y:a.y};a.seatT=0;}
