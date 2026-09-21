@@ -453,8 +453,9 @@ var ACT={
           P.say(c,pick(["つかまえるぞ〜！","ここで つかまえる！"]),1.3);
           P.note(c.x,P.headY(c)-6,"ビューン","#E9A93B");
         }else{
-          P.say(c,"はあはあ…",1.2);
-          P.later(.5,function(){if(alive(s,r))P.say(r,"つかれた〜",1.2);});
+          /* 時間で おわる ときは、おわりに する ことが わかる ことばに する */
+          P.say(c,pick(["はあはあ… もう おわりに しよう","はあはあ… きょうは ここまで！"]),1.6);
+          P.later(.6,function(){if(alive(s,r))P.say(r,pick(["うん、つかれた〜","さんせい〜！","いっぱい はしったね"]),1.4);});
           s.endSoon=true;s.es=0;
         }
       }
