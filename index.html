@@ -185,7 +185,9 @@ body.op-lock{overflow:hidden}
 #opening .op-art{position:relative;z-index:1;flex:0 0 auto;width:min(95vw,calc(var(--ar)*92vh));aspect-ratio:var(--ar)}
 @media(max-width:760px){#opening .op-art{width:min(100vw,calc(var(--ar)*88vh))}}
 /* たて画面は よこはば いっぱい。たりない ときは 上の 空を 切って、草を 画面の 下に つける */
-@media(max-aspect-ratio:1/1){#opening{align-items:flex-end}#opening .op-art{width:100vw}}
+@media(max-aspect-ratio:1/1){#opening{align-items:flex-end}
+  /* 切るのは 空の 14%まで。タイトルまで 切れないように する */
+  #opening .op-art{width:min(100vw,calc(var(--ar)*116vh))}}
 #opening .op-side{position:absolute;z-index:0;top:0;bottom:0;left:-100vw;right:-100vw;
   background:var(--rampL) left center/50.5% 100% no-repeat,var(--rampR) right center/50.5% 100% no-repeat;
   -webkit-mask-image:linear-gradient(to bottom,transparent 0,#000 14%,#000 86%,transparent 100%);
