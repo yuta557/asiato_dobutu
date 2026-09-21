@@ -360,8 +360,20 @@ ACT.race={
       var total=Math.abs(s.x1-s.x0)||1,frac=lead/total;
       /* 先頭が つかれて ペースダウン（ぬかれる きっかけ） */
       if(!s.tired&&s.tt>s.tiredAt&&frac<.62&&leadA){
-        s.tired=true;s.slowAt=s.tt;leadA.slow=rand(1.6,2.3);   /* もっと しっかり ペースダウン */
-        P.say(leadA,pick(["はあ、つかれた〜","ちょっと ペースダウン…"]),1.4);
+        /* つかれるのは 前に いる子ほど なりやすい（いつも 先頭とは かぎらない）。
+           すでに おそくなっている子・本気を出した子は なりにくい */
+        var run3=s.m.filter(function(a){return !a.done;});
+        var ord3=run3.slice().sort(function(p3,q3){return (q3.x-s.x0)*dirX-(p3.x-s.x0)*dirX;});
+        var pool3=ord3.map(function(a,idx){
+          var w=[3,1.8,1.1,.7,.5][Math.min(idx,4)]||.35;
+          if((a.slow||0)>0||(a.trip||0)>0||a.inWet||(a.dash||0)>0)w*=.25;
+          return [a,w];
+        });
+        var tiredA=pool3.length?weighted(pool3):leadA;
+        if(tiredA){
+          s.tired=true;s.slowAt=s.tt;tiredA.slow=rand(1.6,2.3);   /* しっかり ペースダウン */
+          P.say(tiredA,pick(["はあ、つかれた〜","ちょっと ペースダウン…"]),1.4);
+        }
       }
       /* たまに 先頭が ころぶ */
       if(!s.tripped&&s.tt>s.tripAt&&frac<.72&&leadA){
