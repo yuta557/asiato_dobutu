@@ -166,13 +166,16 @@ h1{margin:0;font-family:"Zen Maru Gothic",sans-serif;font-weight:700;font-size:c
 body.op-lock{overflow:hidden}
 /* 画面の よこなが具合で、草原の 絵を 3まいから えらぶ。
    絵の そとがわは、絵の ふちの 色を そのまま たてに のばした 色で うめる（かたちが 出ないので つなぎ目が 見えない） */
-#opening{--bgimg:url(img/opening-bg-narrow.webp);--ar:1.644;--capT:34.30%;--sky:#E6F9FD;--grass:#FAFDEF;
+#opening{--bgimg:url(img/opening-bg-portrait.webp);--ar:0.6082;--capL:4.00%;--capW:92.00%;--capT:19.77%;--sky:#D7F6FC;--grass:#F7FDD9;
+    --rampL:linear-gradient(to bottom,#E4FAFD 0%,#DAF7FB 8%,#DFF8FC 17%,#EBFBFC 25%,#F4FDFA 33%,#F9FDEF 42%,#F7FCD7 50%,#F3FBD6 58%,#F1FCD5 67%,#F1FCC5 75%,#F2FCCA 83%,#F8FDD9 92%,#FBFDE4 100%);
+    --rampR:linear-gradient(to bottom,#E1F8FC 0%,#DDF7FB 8%,#E0F8FB 17%,#E9FAFC 25%,#F1FCFC 33%,#FAFDF6 42%,#FCFEF1 50%,#FBFEEB 58%,#F8FDE3 67%,#F6FDDA 75%,#F2FBCB 83%,#F4FCD0 92%,#FAFDE3 100%)}
+@media(min-aspect-ratio:1/1){#opening{--bgimg:url(img/opening-bg-narrow.webp);--ar:1.6442;--capL:10.70%;--capW:78.60%;--capT:34.29%;--sky:#E6F9FD;--grass:#FAFDEF;
     --rampL:linear-gradient(to bottom,#FBFEFE 0%,#F6FDFD 8%,#F7FDFC 17%,#F9FDFC 25%,#F9FEF7 33%,#FAFEED 42%,#FAFDE6 50%,#FAFDE7 58%,#FAFDE7 67%,#FAFDE9 75%,#FBFDEE 83%,#FCFEF4 92%,#FDFEF7 100%);
-    --rampR:linear-gradient(to bottom,#F4FDFD 0%,#EEFBFD 8%,#EDFBFC 17%,#F2FCFB 25%,#F9FDFA 33%,#FBFDF7 42%,#F9FDF4 50%,#F7FDF1 58%,#F7FDEC 67%,#F9FDE8 75%,#F9FDE7 83%,#FAFDEB 92%,#FCFEF1 100%)}
-@media(min-aspect-ratio:83/50){#opening{--bgimg:url(img/opening-bg-mid.webp);--ar:1.703;--capT:23.70%;--sky:#D5F4FD;--grass:#EEFBE0;
+    --rampR:linear-gradient(to bottom,#F4FDFD 0%,#EEFBFD 8%,#EDFBFC 17%,#F2FCFB 25%,#F9FDFA 33%,#FBFDF7 42%,#F9FDF4 50%,#F7FDF1 58%,#F7FDEC 67%,#F9FDE8 75%,#F9FDE7 83%,#FAFDEB 92%,#FCFEF1 100%)}}
+@media(min-aspect-ratio:83/50){#opening{--bgimg:url(img/opening-bg-mid.webp);--ar:1.7034;--capL:10.70%;--capW:78.60%;--capT:23.69%;--sky:#D5F4FD;--grass:#EEFBE0;
     --rampL:linear-gradient(to bottom,#DDF7FD 0%,#E3F8FB 8%,#F1F9E4 17%,#EEF5C6 25%,#E9F4C4 33%,#EEF9E1 42%,#F3FBF9 50%,#F4FCE5 58%,#EEFAC7 67%,#EAF8AE 75%,#EAF8AE 83%,#EEFBC4 92%,#F0FBCE 100%);
     --rampR:linear-gradient(to bottom,#D7F5FD 0%,#D9F5FC 8%,#ECF9FB 17%,#FAFDFA 25%,#F4FCFA 33%,#F1FCF9 42%,#F0FBF7 50%,#EEFBF7 58%,#E9F9E8 67%,#E4F2BD 75%,#E1F0B5 83%,#E9F7DD 92%,#F4FCF3 100%)}}
-@media(min-aspect-ratio:39/20){#opening{--bgimg:url(img/opening-bg.webp);--ar:2.2716;--capT:15.02%;--sky:#D5F3FC;--grass:#EFF8DF;
+@media(min-aspect-ratio:39/20){#opening{--bgimg:url(img/opening-bg.webp);--ar:2.2716;--capL:10.70%;--capW:78.60%;--capT:15.02%;--sky:#D5F3FC;--grass:#EFF8DF;
     --rampL:linear-gradient(to bottom,#E2F7FC 0%,#E3F6F1 8%,#EDF4D7 17%,#E8EEBE 25%,#E3ECB9 33%,#E4F2D3 42%,#ECF7F3 50%,#E7F6F2 58%,#E7F6E4 67%,#EFF7CD 75%,#EAF4B2 83%,#EBF5B0 92%,#F0F8C7 100%);
     --rampR:linear-gradient(to bottom,#D2F2FC 0%,#E3F6FA 8%,#F7FBF8 17%,#F7FBF7 25%,#F3FAF9 33%,#F4FAF7 42%,#F1F9F5 50%,#EFF9F5 58%,#EDF7EC 67%,#E7F2D2 75%,#DBE8A8 83%,#E0ECB7 92%,#E9F6ED 100%)}}
 #opening{position:fixed;inset:0;z-index:120;overflow:hidden;display:flex;align-items:center;justify-content:center;
@@ -192,7 +195,7 @@ body.op-lock{overflow:hidden}
   -webkit-mask-image:linear-gradient(to bottom,transparent 0,#000 7%,#000 93%,transparent 100%);
   mask-image:linear-gradient(to bottom,transparent 0,#000 7%,#000 93%,transparent 100%)}
 /* タイトルの 絵（966x258）を 草原の 上に おく */
-#opening .op-cap{position:absolute;z-index:2;left:10.70%;top:var(--capT);width:78.60%;aspect-ratio:966/258}
+#opening .op-cap{position:absolute;z-index:2;left:var(--capL);top:var(--capT);width:var(--capW);aspect-ratio:966/258}
 #opening .op-rest{position:absolute;inset:0;width:100%;height:auto;opacity:0;transition:opacity .8s ease}
 #opening .op-rest.on{opacity:1}
 #opening .op-ttl{position:absolute;left:9.94%;top:19.38%;width:81.37%;aspect-ratio:786/150}
