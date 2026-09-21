@@ -1075,10 +1075,16 @@ X.end=function(s){
   var i=P.sessions.indexOf(s);if(i>=0)P.sessions.splice(i,1);
   groupCool=rand(3,5);
   if(X.GROUP&&X.GROUP[s.type])bigCool=rand(12,16);
-  s.m.forEach(function(a){if(a.sess!==s)return;a.afterPlay={type:s.type,t:P.now};a.sess=null;a.mult=1;a.face=0;a.hold=false;a.sleep=false;a.hidden=false;a.nod=0;a.shake=0;a.lag=0;a.catchT=0;
+  function release(a){
+    a.afterPlay={type:s.type,t:P.now};a.sess=null;a.mult=1;a.face=0;a.hold=false;a.sleep=false;a.hidden=false;a.nod=0;a.shake=0;a.lag=0;a.catchT=0;
     a.faceLock=false;a.caught=false;a.wet=0;a.done=false;a.trip=0;a.boost=0;a.weak=0;a.wob=0;a.dash=0;
     a.even=null;a.burst=0;a.aim=null;a.rank=0;a.startX=null;
-    a.rest=rand(1.5,3);a.cool=rand(5,9);a.tx=a.x;a.ty=a.y;});
+    a.rest=rand(1.5,3);a.cool=rand(5,9);a.tx=a.x;a.ty=a.y;
+  }
+  s.m.forEach(function(a){if(a.sess===s)release(a);});
+  /* とちゅうから 入った子など、めんばー表に のこっていない子も かならず ときはなつ
+     （そのままだと うごかない・タップにも こたえない 子に なってしまう） */
+  P.animals.forEach(function(a){if(a.sess===s)release(a);});
   if(s.ball){var k=P.balls.indexOf(s.ball);if(k>=0)P.balls.splice(k,1);}
   if(s.fetch&&s.fetch.by&&s.fetch.a){s.fetch.a.helping=null;s.fetch.a.hold=false;s.fetch.a.face=0;s.fetch.a.rest=1;}
   (s.props||[]).forEach(function(pr){var j=P.props.indexOf(pr);if(j>=0)P.props.splice(j,1);});

@@ -400,7 +400,7 @@ function stepAnimal(a,dt){
       /* ふさがれて よこすべり している あいだは、足を 空回り させない。
          水ぎわは すぐに 気づいて まわり道する（きわを こすりつづけない） */
       a.slideBlock=P.now;
-      if(hit==="pond")a.pondHit=P.now;
+      if(hit==="pond")a.pondHit=P.now;else a.blockA=P.now;
       if(canStep(a,a.x,ny)){nx=a.x;}
       else if(canStep(a,nx,a.y)){ny=a.y;}
       else{
@@ -454,18 +454,39 @@ function stepAnimal(a,dt){
     /* じっさいに 進んだときだけ あしを うごかす（その場で 足ぶみ しない） */
     var px0=a.x,py0=a.y;
     move();
-    var moved0=Math.hypot(a.x-px0,a.y-py0);
+    var mvx=a.x-px0,mvy=a.y-py0,moved0=Math.hypot(mvx,mvy);
     /* あしの うごきは「じっさいに すすんだ 長さ」に あわせる。
        ふさがれて あまり すすめないのに あしだけ 高速で うごく、を なくす */
     /* おされている ときは、ほんの すこし うごいただけでは 足を うごかさない
        （おし合いで 足が 空回り して 見えるのを ふせぐ） */
-    var pushed=P.now-(a.pushT||-9)<dt*2.5||P.now-(a.slideBlock||-9)<dt*1.5;
-    if(moved0>a.u*(pushed?.02:.004))a.ph+=Math.min(moved0/a.u,dt*2.4)*(m==="waddle"?4:2.6);
+    /* ほかの子に ぶつかって よこへ すべったり おし合ったり している あいだは、
+       「目あてに どれだけ 近づけたか」だけで 足を うごかす（その場で 空回り しない） */
+    var touch=P.now-(a.pushT||-9)<dt*3||P.now-(a.slideBlock||-9)<dt*2||P.now-(a.blockA||-9)<dt*2;
+    var prog=d>0?Math.max(0,(mvx*dx+mvy*dy)/d):moved0;
+    var step=touch?prog:moved0;
+    /* 「1びょうあたり どれだけ すすんだか」で くらべる（こま数に よらない） */
+    var need=a.u*dt*(touch?.45:.25);
+    /* 0.4びょうの あいだに ほとんど 場所が かわっていない（その場で ゆれている・
+       ほかの子と よけ合って ぐるぐる している）ときは、足を うごかさない */
+    a.netT=(a.netT||0)+dt;
+    if(a.netX==null){a.netX=a.x;a.netY=a.y;a.netD=a.u;}
+    if(a.netT>=.4){a.netD=Math.hypot(a.x-a.netX,a.y-a.netY);a.netX=a.x;a.netY=a.y;a.netT=0;}
+    var stall=a.netD<a.u*.12;
+    if(step>need&&!stall)a.ph+=Math.min(step/a.u,dt*2.4)*(m==="waddle"?4:2.6);
     else a.moving=false;
   }
   if(!wants&&a.face&&a.face!==a.dir&&P.now-(a.dirT||-9)>.6){a.dir=a.face;a.dirT=P.now;}
   if(a.knock){a.x+=a.knock*dt;a.knock*=Math.pow(.02,dt);if(Math.abs(a.knock)<2)a.knock=0;}
   if(a.z>0||a.vz>0){a.vz-=a.u*15*dt;a.z+=a.vz*dt;if(a.z<=0){a.z=0;a.vz=0;a.land=1;}}
+  /* もう おわった あそび・見まもりに しばられたままの子を ときはなつ
+     （うごかない・タップにも こたえない 子が のこらないように） */
+  if(a.sess&&P.sessions.indexOf(a.sess)<0){
+    a.sess=null;a.hold=false;a.sleep=false;a.hidden=false;a.mult=1;a.face=0;a.faceLock=false;
+    a.caught=false;a.done=false;a.dash=0;a.burst=0;a.even=null;a.rest=rand(.3,1);a.tx=a.x;a.ty=a.y;
+  }
+  if(a.watch&&P.sessions.indexOf(a.watch)<0){
+    a.watch=null;a.watchMove=false;a.galSet=false;a.galI=null;a.hold=false;a.seatGoT=null;a.rest=rand(.3,1);
+  }
   /* 見まもり：ずっと 止まったままなら、行き先を 変えて やりなおす
      （あそび中・おしゃべり中・見まもり中・かくれんぼで かくれている子は のぞく） */
   if(Math.hypot(a.x-(a.frzX==null?a.x-99:a.frzX),a.y-(a.frzY==null?a.y:a.frzY))<a.u*.05){
@@ -474,6 +495,9 @@ function stepAnimal(a,dt){
     if(a.frozT>(a.moving?3:6)&&!busyNow){
       a.frozT=0;a.stuckT=0;a.rest=0;a.z=0;a.vz=0;a.land=0;a.hold=false;
       var qz=P.farSpot(a);a.tx=qz.x;a.ty=qz.y;
+    }else if(a.frozT>45&&a.sess){
+      /* あそびの中で まったく うごかないまま なら、その あそびを 終わりにする */
+      a.frozT=0;if(AD.acts&&AD.acts.end)AD.acts.end(a.sess);
     }else if(a.frozT>12&&busyNow&&!a.sess&&!a.hidden&&!a.galSet){
       /* 見まもりなどで ながく 止まっていたら、いちど ときはなつ */
       a.frozT=0;a.watch=null;a.watchMove=false;a.galSet=false;a.helping=null;a.hold=false;a.rest=rand(.2,.8);
