@@ -1139,7 +1139,7 @@ function drawMat(g,s){
   var w=(G.n-1)*G.gap+u*(rows>1?3.8:3.2);
   /* たてよこの ひりつは のばしてよい（ならぶ列が 2つのときは たてに のばす） */
   /* たては これくらいで じゅうぶん（まえは 2ばい ちかく あった） */
-  var h=Math.max(w*(159/426)*.62,u*(rows>1?1.55:1.05));
+  var h=Math.max(w*(159/426)*.62,u*(rows>1?1.95:1.25));
   var cx=G.x0+G.gap*(G.n-1)/2+(rows>1?G.gap*.25:0),by=G.y+u*.55;
   if(MAT.complete&&MAT.naturalWidth)g.drawImage(MAT,cx-w/2,by-h,w,h);
   /* ざぶとん（ひとり1まいでは なく、シートに 2〜4まい） */
@@ -1149,7 +1149,7 @@ function drawMat(g,s){
     var cw=u*1.35,ch=cw*(im.naturalHeight/im.naturalWidth);
     var rowI=rows>1&&i%2?1:0;
     var fx=cx+(nc===1?0:(i/(nc-1)-.5)*(w*.56))+(rowI?u*.4:0);
-    var fy=G.y+u*.12-rowI*u*1.15;
+    var fy=G.y+u*.38-rowI*u*.9;
     g.drawImage(im,fx-cw/2,fy-ch*.55,cw,ch);
   }
 }
@@ -1241,7 +1241,7 @@ function spectate(dt){
     s.seats.forEach(function(a){
       if(a.galGave||a.galI==null||fans.indexOf(a)<0)return;
       var gi=clamp(a.galI,0,s.gal.n*2-1),col=gi%s.gal.n,row=Math.floor(gi/s.gal.n);
-      var qx=s.gal.x0+s.gal.gap*col+(row?s.gal.gap*.5:0),qy=s.gal.y+a.u*.3-row*a.u*1.15;
+      var qx=s.gal.x0+s.gal.gap*col+(row?s.gal.gap*.5:0),qy=s.gal.y+a.u*.55-row*a.u*.9;
       comingN++;
       if(Math.hypot(a.x-qx,(a.y-qy)*1.3)<a.u*3)nearN++;
     });
@@ -1269,7 +1269,7 @@ function spectate(dt){
     if(G){
       var gi=clamp(a.galI==null?0:a.galI,0,G.n*2-1),col=gi%G.n,row=Math.floor(gi/G.n);
       /* ざぶとんの 上に すわって 見えるよう、すこし 下に */
-      var sx=G.x0+G.gap*col+(row?G.gap*.5:0),sy=G.y+a.u*.3-row*a.u*1.15;
+      var sx=G.x0+G.gap*col+(row?G.gap*.5:0),sy=G.y+a.u*.55-row*a.u*.9;
       var sd=Math.hypot(a.x-sx,(a.y-sy)*1.3);
       if(sd>a.u*.45){
         /* ちゃんと すすめているか 見ておく。ふさがれて 進めないまま だと
