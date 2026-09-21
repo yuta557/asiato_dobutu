@@ -1185,7 +1185,7 @@ function drawMat(g,s){
   var w=(G.n-1)*G.gap+u*(rows>1?3.8:3.2);
   /* たてよこの ひりつは のばしてよい（ならぶ列が 2つのときは たてに のばす） */
   /* たては これくらいで じゅうぶん（まえは 2ばい ちかく あった） */
-  var h=Math.max(w*(159/426)*.62,u*(rows>1?1.95:1.25));
+  var h=Math.max(w*(159/426)*.62,u*(rows>1?2.3:1.25));
   var cx=G.x0+G.gap*(G.n-1)/2+(rows>1?G.gap*.25:0),by=G.y+u*.9;
   if(MAT.complete&&MAT.naturalWidth)g.drawImage(MAT,cx-w/2,by-h,w,h);
   /* ざぶとん（ひとり1まいでは なく、シートに 2〜4まい） */
@@ -1195,7 +1195,7 @@ function drawMat(g,s){
     var cw=u*1.35,ch=cw*(im.naturalHeight/im.naturalWidth);
     var rowI=rows>1&&i%2?1:0;
     var fx=cx+(nc===1?0:(i/(nc-1)-.5)*(w*.56))+(rowI?u*.4:0);
-    var fy=G.y+u*.33-rowI*u*.85;
+    var fy=G.y+u*.33-rowI*u*1.15;
     g.drawImage(im,fx-cw/2,fy-ch*.55,cw,ch);
   }
 }
@@ -1334,7 +1334,7 @@ function spectate(dt){
       var gi=clamp(a.galI==null?0:a.galI,0,G.n*2-1),col=gi%G.n,row=Math.floor(gi/G.n);
       /* ざぶとんの 上に すわって 見えるよう、すこし 下に */
       var mu=s.matU||P.U;
-      var sx=G.x0+G.gap*col+(row?G.gap*.5:0),sy=G.y+mu*.5-row*mu*.85;
+      var sx=G.x0+G.gap*col+(row?G.gap*.5:0),sy=G.y+mu*.5-row*mu*1.15;
       var sd=Math.hypot(a.x-sx,(a.y-sy)*1.3);
       if(sd>a.u*.3){
         /* シートへは ぱっと 行く（草原を よこぎって 歩くと、あそび場や 池で

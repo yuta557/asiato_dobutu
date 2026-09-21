@@ -199,6 +199,14 @@ P.inWater=inWater;
 function pondBlock(a,x,y){return !a.sess&&inWater(x,y,1.04)&&!inWater(a.x,a.y,1.04);}
 function canStep(a,x,y){return !blockedAt(a,x,y)&&!pondBlock(a,x,y);}
 /* 前にほかの子がいたら、横によけながら進む（同じあそびの なかまどうしは よけない） */
+var UID=0;
+/* よける がわ（左・右）は いちど きめたら しばらく 変えない。
+   相手を またぐ しゅんかんに 符号が 反転して、毎フレーム 左右に ふれるのを ふせぐ */
+function stickySide(a,key,raw){
+  var m=a.sideM||(a.sideM={}),e=m[key];
+  if(!e||P.now-e.t>1.1){m[key]={s:raw,t:P.now};return raw;}
+  e.t=P.now;return e.s;
+}
 function avoid(a,ux,uy){
   var sx=0,sy=0;
   if(a.hidden)return {x:ux,y:uy};
@@ -208,7 +216,8 @@ function avoid(a,ux,uy){
     var ex=b.x-a.x,ey=(b.y-a.y)*1.6,dist=Math.hypot(ex,ey),R=(a.u+b.u)*(team?.8:1.05);
     if(dist>R||dist<.01)return;
     var ahead=(ex*ux+ey*uy)/dist;if(ahead<.05)return;
-    var side=(ux*ey-uy*ex)>0?-1:1,w=(1-dist/R)*ahead*(team?.7:1.8);
+    var side=stickySide(a,"a"+(b.uid||(b.uid=++UID)),(ux*ey-uy*ex)>0?-1:1),
+        w=(1-dist/R)*ahead*(team?.7:1.8);
     sx+=-uy*side*w-ex/dist*w*.35;sy+=ux*side*w-ey/dist*w*.35;
   });
   /* あそび場の手前では、中に入らないよう まわりこむ */
@@ -219,7 +228,7 @@ function avoid(a,ux,uy){
     if(near){
       var dist2=Math.hypot(ex2,ey2)||1,ahead2=(ex2*ux+ey2*uy)/dist2;
       if(ahead2>0){
-        var side2=(ux*ey2-uy*ex2)>0?-1:1,w2=ahead2*1.6;
+        var side2=stickySide(a,"area",(ux*ey2-uy*ex2)>0?-1:1),w2=ahead2*1.6;
         sx+=-uy*side2*w2-ex2/dist2*w2*.8;sy+=ux*side2*w2-ey2/dist2*w2*.8;
       }
     }
@@ -377,9 +386,13 @@ function stepAnimal(a,dt){
   var dx=a.tx-a.x,dy=a.ty-a.y,d=Math.hypot(dx,dy);
   if(a.bumpStun>0){a.bumpStun-=dt;a.shake=a.bumpStun>0?Math.sin(P.now*26)*a.u*.05:0;}
   /* おされている あいだは 歩きださない（おし合って 前後に ゆれて 見えるのを ふせぐ）*/
-  var shoved=!a.sess&&!a.leaving&&P.now-(a.pushT||-9)<.14;
+  /* おされている あいだは 歩きださない。ただし ずっと おされっぱなし（席で ぎゅうぎゅう など）だと
+     二度と 歩けなく なるので、1秒 つづいたら あきらめて 歩きだす */
+  if(P.now-(a.pushT||-9)<.14)a.pushOn=(a.pushOn||0)+dt;else a.pushOn=0;
+  var shoved=!a.sess&&!a.leaving&&a.pushOn>0&&a.pushOn<1;
   var wants=d>a.u*.25&&(a.rest<=0||a.sess||a.leaving)&&!a.hold&&!a.sleep&&!(a.bumpStun>0)&&!shoved;
   a.wants=wants;   /* 足が 止まって 見えても「進もうとしている」かどうか */
+  if(!wants){a.hvx=null;a.hvy=null;}
   var m=a.sp.motion,base=a.u*(m==="hop"?2.0:m==="waddle"?1.25:1.55);
   /* かけっこの あそびでは どうぶつによる はやさの ちがいを なくし、
      その回の「ちから」だけで きまるようにする */
@@ -393,7 +406,14 @@ function stepAnimal(a,dt){
   a.moving=wants;
   /* 向きは、はっきり左右に動いたときだけ、少し間をあけて変える（ぶるぶる向きが変わらないように） */
   function move(){
-    var v=avoid(a,dx/d,dy/d),s=Math.min(d,speed*dt),nd=v.x>0?1:-1;
+    var v=avoid(a,dx/d,dy/d);
+    /* 1フレーム前の むきを ひきつぐ。ゼロから 作りなおすと、
+       よける がわが 変わった しゅんかんに 行ったり来たりして 足が 空回りする */
+    if(a.hvx==null){a.hvx=v.x;a.hvy=v.y;}
+    else{var kH=Math.min(1,dt*7);a.hvx+=(v.x-a.hvx)*kH;a.hvy+=(v.y-a.hvy)*kH;}
+    var hl=Math.hypot(a.hvx,a.hvy);
+    if(hl>.05)v={x:a.hvx/hl,y:a.hvy/hl};else{a.hvx=v.x;a.hvy=v.y;}
+    var s=Math.min(d,speed*dt),nd=v.x>0?1:-1;
     var nx=a.x+v.x*s,ny=a.y+v.y*s,hit=canStep(a,nx,ny)?null:(blockedAt(a,nx,ny)||"pond");
     if(hit){
       /* おしのけるのではなく、かさなる ほうへ（また 池の上へ）は そもそも 進まない。
@@ -490,7 +510,12 @@ function stepAnimal(a,dt){
   }
   /* 見まもり：ずっと 止まったままなら、行き先を 変えて やりなおす
      （あそび中・おしゃべり中・見まもり中・かくれんぼで かくれている子は のぞく） */
-  if(Math.hypot(a.x-(a.frzX==null?a.x-99:a.frzX),a.y-(a.frzY==null?a.y:a.frzY))<a.u*.05){
+  /* おし合いの こまかい ゆれで リセットされないよう、1.2びょうごとの
+     「ほんとうに 進んだ きょり」で 止まりっぱなしを みる */
+  a.frzT=(a.frzT||0)+dt;
+  if(a.frzX==null){a.frzX=a.x;a.frzY=a.y;a.frzD=a.u;}
+  if(a.frzT>=1.2){a.frzD=Math.hypot(a.x-a.frzX,a.y-a.frzY);a.frzX=a.x;a.frzY=a.y;a.frzT=0;}
+  if((a.frzD==null?a.u:a.frzD)<a.u*.4){
     a.frozT=(a.frozT||0)+dt;
     var busyNow=a.sess||a.chat||a.watch||a.helping||a.hidden||a.leaving;
     if(a.frozT>(a.moving?3:6)&&!busyNow){
@@ -503,7 +528,7 @@ function stepAnimal(a,dt){
       /* 見まもりなどで ながく 止まっていたら、いちど ときはなつ */
       a.frozT=0;a.watch=null;a.watchMove=false;a.galSet=false;a.helping=null;a.hold=false;a.rest=rand(.2,.8);
     }
-  }else{a.frozT=0;a.frzX=a.x;a.frzY=a.y;}
+  }else a.frozT=0;
   if(!a.leaving){a.x=clamp(a.x,a.u*.8,S.W-a.u*.8);a.y=clamp(a.y,S.top,S.bottom);bushStepOut(a,dt);}
   else a.alpha=clamp(Math.min(a.x+a.u*2,S.W+a.u*2-a.x)/(a.u*2),0,1);
 }
@@ -525,6 +550,9 @@ function stumble(a,b){
 }
 function unstack(a,b,dt){
   if(a.hidden||b.hidden||a.leaving||b.leaving)return;
+  /* 見まもりの 席に すわっている子どうしは おし合わない
+     （きちんと ならべてある のに 毎フレーム おし合って、動けなく なるのを ふせぐ） */
+  if(a.galSet&&b.galSet)return;
   if(a.sess&&a.sess===b.sess)return;          /* なかまどうしは すりぬける */
   if(headOn(a,b)){
     /* 正面から ぶつかる ときは すりぬける。ごくまれに こける */
