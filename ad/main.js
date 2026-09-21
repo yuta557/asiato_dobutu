@@ -15,7 +15,8 @@ var BY_SHAPE={line:"foot0",zigzag:"foot1",circle:"foot3",triangle:"foot4",square
 var BY_TAPS={1:"hand3",2:"hand5",3:"hand4",4:"hand0",5:"hand2"},LONG="hand1",MAX_TAPS=5;
 var RECIPE={foot0:"まっすぐ",foot1:"ギザギザ",foot3:"まる",foot4:"さんかく",foot2:"しかく",foot5:"ぐるぐる",
   hand3:"1回タップ",hand5:"2回タップ",hand4:"3回タップ",hand0:"4回タップ",hand2:"5回タップ",hand1:"ながおし"};
-var ORDER=["foot0","foot1","foot3","foot4","foot2","foot5","hand3","hand5","hand4","hand0","hand2","hand1"];
+/* 上の段：ヒヨコ・ネコ・ゾウ・クマ・ウサギ・コアラ */
+var ORDER=["foot0","foot4","foot2","foot3","foot1","foot5","hand3","hand5","hand4","hand0","hand2","hand1"];
 var TIP0='<span class="tip-pc">ドラッグでなぞる形や、クリックの回数で、うまれるどうぶつが変わるよ</span><span class="tip-sp">指でなぞる形や、タップの回数で、うまれるどうぶつが変わるよ</span>';
 
 /* 背景は うごかないので、どうぶつとは べつの絵（うしろのキャンバス）に一度だけ描く */

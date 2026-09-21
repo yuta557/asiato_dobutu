@@ -905,7 +905,10 @@ var ACT={
       for(var i=1;i<s.m.length;i++){
         var f=s.m[i];
         want+=(s.m[i-1].u+f.u)*1.05;
-        if(f.lag>0){f.lag-=dt;f.hold=true;if(f.lag<=0){f.hold=false;f.catchT=2;P.say(f,"まって〜！",1.1);}continue;}
+        /* おくれて 追いつく ときの「まって〜！」は、行列が まだ すすんで いるときだけ
+           （先頭が ついて 止まっている のに 言うと おかしい） */
+        if(f.lag>0){f.lag-=dt;f.hold=true;if(f.lag<=0){f.hold=false;f.catchT=2;
+          if(L.moving&&!(s.stop>0))P.say(f,"まって〜！",1.1);}continue;}
         f.catchT=Math.max(0,(f.catchT||0)-dt);
         var pt=null,at=s.vpos-want,lhx=hx,lhy=hy;
         for(var j=s.trail.length-1;j>=0;j--){
@@ -958,7 +961,7 @@ var ACT={
           P.later(.7,function(){if(alive(s,L))P.say(L,pick(["いいよ〜！","うしろに ついて〜","どんどん ふえるね〜"]),1.3);});
         }
       }
-      s.talkT-=dt;if(s.talkT<0){s.talkT=rand(2,3);P.say(pick(s.m.slice(1)),pick(["いちに、いちに","まって〜","たのしいね"]),1.2);}
+      s.talkT-=dt;if(s.talkT<0){s.talkT=rand(2,3);P.say(pick(s.m.slice(1)),pick(["いちに、いちに","たのしいね","ながい ぎょうれつ〜"]),1.2);}
     },
     tap:function(s,a){var L=s.m[0];
       if(s.st===1){tapLine(a,"parEnd",["とうちゃく〜！","ついたね"]);return;}
@@ -1197,9 +1200,11 @@ function drawMat(g,s){
   }
 }
 /* 見まもる子の ならぶ場所。あそびが はじまったときに 一度だけ きめて、あとは 動かさない */
-function gallery(n,u,near,fy){
+function gallery(n,u,near,fy,gapMin){
   var A=P.area;if(!A)return null;
-  var gap=u*1.55,w=gap*(n-1);
+  /* となりとの あいだは、いちばん 体の ひろい子に 合わせる
+     （手がたの子は はねを 広げるので u より ずっと ひろい） */
+  var gap=Math.max(u*1.55,gapMin||0),w=gap*(n-1);
   if(w>S.W-u*3)return null;
   /* よーいどん・だるまさんがころんだ は 手前の帯を あけてあるので、そこを 特等席にする。
      手前が 案内の文字などで ふさがっている ときのために、うしろの席も 用意しておく
@@ -1264,8 +1269,11 @@ function spectate(dt){
     var n0=Math.min(Math.max(fans.length,2),8),g=null;
     /* 手前の 特等席を 先に さがし、どうしても なければ うしろの席にする */
     var fy0=0;fans.forEach(function(a){fy0+=a.y;});fy0/=fans.length;
+    /* いちばん ひろい子の はばを はかって、席の あいだを きめる */
+    var wideM=0;fans.forEach(function(a){wideM=Math.max(wideM,P.halfW(a)*2);});
+    var gapW=wideM*1.08;
     for(var pass=1;pass>=0&&!g;pass--)
-      for(var tryN=n0;tryN>=2&&!g;tryN--)g=gallery(tryN,u0,pass,fy0);
+      for(var tryN=n0;tryN>=2&&!g;tryN--)g=gallery(tryN,u0,pass,fy0,gapW);
     if(g){
       s.gal=g;s.galN=g.n;s.matU=u0;s.seats=[];
       fans.slice().sort(function(p,q){return p.x-q.x;}).forEach(function(a,i){
