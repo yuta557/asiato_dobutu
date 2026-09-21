@@ -937,7 +937,7 @@ var ACT={
       }
       /* 歩いていくうちに、とちゅうの子が どんどん くわわる */
       s.joinT=(s.joinT==null?rand(1.5,3):s.joinT)-dt;
-      if(s.joinT<=0&&s.m.length<9){
+      if(s.joinT<=0&&s.m.length<12){   /* ながい ぎょうれつも できるように */
         s.joinT=rand(2.5,4.5);
         var tail=s.m[s.m.length-1];
         /* さそうのは、行列の うしろがわ にいる子だけ。
@@ -1428,7 +1428,7 @@ X.schedule=function(dt){
   var free=avail.filter(function(a){return a.cool<=0;});
   if(free.length<2)return;
   /* ぎょうれつは 3〜4ひきで 出発して、歩きながら どんどん ふえていく */
-  if(free.length>=3&&Math.random()<.24){X.start("parade",free.sort(function(){return Math.random()-.5;}).slice(0,Math.min(free.length,4)));return;}
+  if(free.length>=3&&Math.random()<.24){X.start("parade",free.sort(function(){return Math.random()-.5;}).slice(0,Math.min(free.length,6)));return;}
   var a=pick(free),b=free.filter(function(o){return o!==a;}).sort(function(p,q){return AD.dist(a,p)-AD.dist(a,q);})[0];
   var near=free.filter(function(o){return o!==a;}).sort(function(p,q){return AD.dist(a,p)-AD.dist(a,q);});
   var hasEle=a.sp.key==="foot2"||b.sp.key==="foot2";

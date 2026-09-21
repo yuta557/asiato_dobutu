@@ -784,7 +784,12 @@ ACT.oni={
       if(s.talkT<0){
         s.talkT=rand(2,3.2);
         if(Math.random()<.5&&s.rs.length)P.say(pick(s.rs),pick(["にげろ〜","こっちだよ〜","つかまらないぞ〜"]),1.2);
-        else P.say(pick(s.onis),pick(["まてまて〜","つかまえるぞ〜","そっちに いった！"]),1.2);
+        else{
+          /* 「そっちに いった！」は 仲間の おにが いてこその ことば */
+          var oniLines=["まてまて〜","つかまえるぞ〜"];
+          if(s.onis.length>=2)oniLines=oniLines.concat(["そっちに いった！","そっちは まかせた〜！"]);
+          P.say(pick(s.onis),pick(oniLines),1.2);
+        }
       }
       /* おわるのは「ぜんいん つかまえた」か「30びょう たった」ときだけ。
          のこり1人に なっても、まだ つづく */
@@ -832,7 +837,16 @@ function catchIt(s,c,t){
   s.aimT=0;                       /* つかまえたら すぐ おいかける あいてを 決めなおす */
   t.freeze=1.2;t.hold=true;t.aim=null;t.fleeP=null;
   faceTo(c,t);P.say(c,"タッチ！",1.1);P.jump(c,3.4);
-  P.later(.5,function(){if(alive(s,t))P.say(t,pick(["つかまった〜、おにに なっちゃった","いっしょに おにだ〜"]),1.5);});
+  /* さいごの ひとりが つかまった ときは、そこで おしまい なので
+     「おにに なっちゃった」とは 言わない */
+  var fin=!s.rs.length;
+  P.later(.5,function(){
+    if(!alive(s,t))return;
+    if(fin){P.say(t,pick(["つかまっちゃった〜","あ〜、つかまった！","もう ちょっと だったのに〜"]),1.5);return;}
+    /* ふきだしが たくさん 出ている ときは、わざわざ 言わない */
+    if(P.bubbles.length>=3)return;
+    P.say(t,pick(["つかまった〜、おにに なっちゃった","いっしょに おにだ〜"]),1.5);
+  });
 }
 /* みんなであそぶ あそびの一覧（4ひき以上いるときに えらばれる） */
 X.GROUP={daruma:{max:9,weight:1.2,lanes:true,minK:1.02,ranks:2},race:{max:7,weight:1.2,lanes:true,minK:1.1},tug:{max:8,weight:1,even:true},oni:{max:8,weight:1.4}};
