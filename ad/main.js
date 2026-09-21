@@ -206,6 +206,8 @@ function triPoint(u){
 }
 function runDemo(dt){
   /* みんなが 帰っていく あいだは、新しい子を うまない */
+  /* オープニングの 絵を だしている あいだは、まだ はじめない */
+  if(window.__opening){if(demo.phase!=="idle")abortDemo();return;}
   if(P.bye){if(demo.phase!=="idle")abortDemo();return;}
   /* みんなで 見まもる あそび（だるまさんがころんだ・よーいどん・つなひき）の 間も、
      あたらしい子を うまない（とちゅうから 入ってきて ばらばらに ならないように） */
