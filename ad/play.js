@@ -57,7 +57,9 @@ P.say=function(a,text,dur,chorus){
   if(!a||!text)return;
   /* おなじ ことばが いま ほかの子の ふきだしに 出ているときは、かさねて 出さない
      （おなじ セリフの ふきだしが 2つ ならんで 見えないように）。口だけ うごかす */
-  var dup=!chorus&&P.bubbles.some(function(b){return b.a!==a&&b.text===text&&P.now-b.born<Math.min(b.dur,1.8);});
+  /* おなじ ことばの ふきだしが 出ている あいだは、かさねて 出さない
+     （ずらして 2つ ならぶと 読みにくい）。消えぎわも すこし ふくめて みる */
+  var dup=!chorus&&P.bubbles.some(function(b){return b.a!==a&&b.text===text&&P.now-b.born<b.dur+.25;});
   if(dup){a.talk=.45;return;}
   var same=P.bubbles.some(function(b){return b.a===a&&b.text===text;});
   P.bubbles=P.bubbles.filter(function(b){return b.a!==a;});
