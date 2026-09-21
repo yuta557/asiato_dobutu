@@ -1154,7 +1154,7 @@ tug:["がんばれ〜！","よいしょ〜！"],oni:["にげて〜！","うし�
 /* シートで 見ている子の ひとりごと */
 /* ブルーシートへ むかう とちゅうの ひとこと。
    「なにを しに いくのか」が わかる ことばにする */
-var WATCH=["おうえん しに いくね！","きょうは かんせん〜","いい せきで みるぞ〜",
+var WATCH=["おうえん しとくね〜","きょうは かんせん〜","いい せきで みるぞ〜",
   "すわって おうえん するぞ〜","かんせん、かんせん〜"];
 /* ---- 見まもる子の ブルーシート（絵をそのまま つかう） ---- */
 var MAT=new Image();MAT.src="img/sheet.png";
@@ -1232,7 +1232,13 @@ function spectate(dt){
   var s=P.sessions.filter(function(x){return x.m.length>=4&&WATCHABLE[x.type];})[0];
   var fans=P.animals.filter(function(a){return !a.sess&&!a.leaving&&!a.helping&&!a.chat&&a.age>=1.1;});
   if(!s){
-    P.animals.forEach(function(a){if(a.watch){a.watch=null;a.face=0;a.watchMove=false;a.galI=null;a.galSet=false;a.hold=false;a.galGave=false;a.seatT=0;a.seatAll=0;a.seatSwap=0;a.seatP=null;a.galSide=null;a.seatGoT=null;a.rest=rand(.6,2);}});
+    var seen=P.animals.filter(function(a){return !!a.watch;});
+    seen.forEach(function(a){a.watch=null;a.face=0;a.watchMove=false;a.galI=null;a.galSet=false;a.hold=false;a.galGave=false;a.seatT=0;a.seatAll=0;a.seatSwap=0;a.seatP=null;a.galSide=null;a.seatGoT=null;a.rest=rand(.6,2);});
+    /* ふりかえりの ひとことは、あそびが すっかり おわってから（さいちゅうには 言わない） */
+    if(seen.length){
+      var w2=pick(seen);
+      P.later(rand(.7,1.6),function(){if(!w2.sess&&!w2.leaving&&!w2.watch)P.say(w2,pick(SEEN_AFTER),1.5);});
+    }
     return;
   }
   /* あそびが はじまった ときに すぐ、何人 見るかを きめて シートを しく。そのあとは 動かさない */
@@ -1344,13 +1350,9 @@ function spectate(dt){
   if(s.cheerT<=0){
     s.cheerT=rand(5,8);
     var seated=fans.filter(function(a){return !a.watchMove||a.galSet;}),walking=fans.filter(function(a){return a.watchMove&&!a.galSet;});
-    if(s.st>=2){
-      /* あそびが おわったら、おうえんでは なく ふりかえりの ことば */
-      var who2=seated.length?pick(seated):(fans.length?pick(fans):null);
-      if(who2)P.say(who2,pick(SEEN_AFTER),1.5);
-    }
-    /* すわっている子は おうえん、むかっている子は 「かんせん！！」など */
-    else if(walking.length&&Math.random()<.5)P.say(pick(walking),pick(WATCH),1.4);
+    /* すわっている子は おうえん、むかっている子は 「かんせん！！」など。
+       感想（いい しょうぶだったね など）は あそびが おわってから 言う */
+    if(walking.length&&Math.random()<.5)P.say(pick(walking),pick(WATCH),1.4);
     else if(seated.length&&CHEER[s.type])P.say(pick(seated),pick(CHEER[s.type]),1.3);
   }
 }
