@@ -372,7 +372,8 @@ function fsBig(){return board.classList.contains("bigscreen");}
 function bigSet(on){board.classList.toggle("bigscreen",on);document.body.classList.toggle("op-lock",on);}
 function fsSync(){
   if(fsReal()&&fsBig())bigSet(false);            /* 本物の 全画面が 効いたら 代わりは やめる */
-  if(fsBtn)fsBtn.textContent=(fsReal()||fsBig())?"もとの 大きさ":"ぜんがめん";
+  if(fsBtn){var t=(fsReal()||fsBig())?"もとの 大きさ":"ぜんがめん";
+    fsBtn.title=t;fsBtn.setAttribute("aria-label",t);}
 }
 function bigOn(on){bigSet(on);fsSync();}
 if(fsBtn){

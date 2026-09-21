@@ -162,6 +162,12 @@ h1{margin:0;font-family:"Zen Maru Gothic",sans-serif;font-weight:700;font-size:c
   .how h3{font-size:16px}
   .how p{font-size:13.5px}
 }
+/* 全画面ボタン（矢印の アイコン） */
+.fs-btn{display:inline-flex;align-items:center;justify-content:center;padding:4px;width:30px;height:30px;line-height:0}
+.fs-btn svg{width:17px;height:17px;fill:none;stroke:var(--ink);stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.fs-btn .fs-i-close{display:none}
+.board:fullscreen .fs-btn .fs-i-open,.board.bigscreen .fs-btn .fs-i-open{display:none}
+.board:fullscreen .fs-btn .fs-i-close,.board.bigscreen .fs-btn .fs-i-close{display:block}
 /* ── ボードを 全画面に ──
    ブラウザの 全画面が つかえない とき（iPhone や 埋めこみ）は、
    .bigscreen で 画面いっぱいに 広げる（見た目は おなじ） */
@@ -290,8 +296,11 @@ body.op-lock{overflow:hidden}
       <span class="dot"></span><span class="dot"></span><span class="dot"></span>
       <span class="board-title">まちであそぶボード — あしあとどうぶつ</span>
       <button class="reset about-btn" id="aboutBtn" type="button" aria-expanded="false" aria-controls="about"><span class="tip-pc">この作品について</span><span class="tip-sp">作品について</span></button>
-      <button class="reset" id="fsBtn" type="button">ぜんがめん</button>
       <button class="reset" id="reset" type="button">まっさらにする</button>
+      <button class="reset fs-btn" id="fsBtn" type="button" title="ぜんがめん" aria-label="ぜんがめん">
+        <svg class="fs-i-open" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M20 15v5h-5M4.6 4.6l6 6M19.4 19.4l-6-6"/></svg>
+        <svg class="fs-i-close" viewBox="0 0 24 24" aria-hidden="true"><path d="M10 4v6H4M14 20v-6h6M3.6 3.6l6.4 6.4M20.4 20.4l-6.4-6.4"/></svg>
+      </button>
     </div>
     <div class="board-stage" id="stage">
       <canvas id="zoo-bg" aria-hidden="true"></canvas>
@@ -339,16 +348,16 @@ body.op-lock{overflow:hidden}
 
 </main>
 
-<script src="ad/prints.js?v=5"></script>
-<script src="ad/species-foot.js?v=5"></script>
-<script src="ad/species-hand.js?v=5"></script>
-<script src="ad/gesture.js?v=5"></script>
-<script src="ad/scene.js?v=5"></script>
-<script src="ad/play.js?v=5"></script>
-<script src="ad/acts.js?v=5"></script>
-<script src="ad/acts-group.js?v=5"></script>
-<script src="ad/chat.js?v=5"></script>
-<script src="ad/debug.js?v=5"></script>
-<script src="ad/main.js?v=5"></script>
+<script src="ad/prints.js?v=7"></script>
+<script src="ad/species-foot.js?v=7"></script>
+<script src="ad/species-hand.js?v=7"></script>
+<script src="ad/gesture.js?v=7"></script>
+<script src="ad/scene.js?v=7"></script>
+<script src="ad/play.js?v=7"></script>
+<script src="ad/acts.js?v=7"></script>
+<script src="ad/acts-group.js?v=7"></script>
+<script src="ad/chat.js?v=7"></script>
+<script src="ad/debug.js?v=7"></script>
+<script src="ad/main.js?v=7"></script>
 </body>
 </html>
