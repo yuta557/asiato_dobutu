@@ -164,11 +164,11 @@ h1{margin:0;font-family:"Zen Maru Gothic",sans-serif;font-weight:700;font-size:c
 }
 /* ── オープニング（あしあとどうぶつ が 一文字ずつ でてくる） ── */
 body.op-lock{overflow:hidden}
-#opening{position:fixed;inset:0;z-index:120;background:var(--bg);display:flex;align-items:center;justify-content:center;transition:opacity .6s ease}
+#opening{position:fixed;inset:0;z-index:120;background:linear-gradient(#F2F9FC 0%,#F5FAFA 45%,#F4FAF5 100%);display:flex;align-items:center;justify-content:center;transition:opacity .6s ease}
 #opening.op-out{opacity:0;pointer-events:none}
 #opening{overflow:hidden}
-#opening .op-art{position:relative;width:min(94vw,1120px)}
-@media(max-width:760px){#opening .op-art{width:140vw}#opening .op-skip{bottom:-11%;font-size:12px}}
+#opening .op-art{position:relative;flex:0 0 auto;width:max(100vw,min(227vh,128vw))}
+@media(max-width:760px){#opening .op-art{width:max(136vw,min(227vh,100vw))}#opening .op-skip{bottom:-11%;font-size:12px}}
 #opening .op-bg{display:block;width:100%;height:auto}
 #opening .op-ttl{position:absolute;left:19.70%;top:24.06%;width:64.07%;aspect-ratio:774/149}
 #opening .op-ttl i{position:absolute;inset:0;background:url(img/opening-title.png) no-repeat 0 0/100% 100%;clip-path:inset(0 var(--r) 0 var(--l));transform-origin:var(--c) 66%;opacity:0;transform:translateY(12%) scale(.8) rotate(-5deg)}
