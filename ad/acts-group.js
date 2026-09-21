@@ -3,7 +3,7 @@
 (function(){
 "use strict";
 var AD=window.AD,S=AD.scene,P=AD.play,X=AD.acts,H=X.h,ACT=X.ACT,PI=Math.PI,clamp=AD.clamp,rand=AD.rand,pick=AD.pick;
-var go=H.go,arrived=H.arrived,faceTo=H.faceTo,next=H.next,once=H.once,alive=H.alive,tapLine=H.tapLine,goodbye=H.goodbye,fx=H.fx;
+var go=H.go,arrived=H.arrived,faceTo=H.faceTo,next=H.next,once=H.once,alive=H.alive,tapLine=H.tapLine,goodbye=H.goodbye,fx=H.fx,weighted=H.weighted;
 
 function maxU(m){return m.reduce(function(v,a){return Math.max(v,a.u);},0);}
 function allThere(s,list,limit){return (list||s.m).every(arrived)||s.tt>(limit||6);}
@@ -319,11 +319,19 @@ ACT.race={
     }
     if(s.st===2){
       /* とちゅうから 本気を出す子が いる */
-      if(!s.spurted&&s.tt>s.spurtAt){
+      /* おそくなった すぐあとに 本気を 出すと せわしないので、すこし 間をあける */
+      if(!s.spurted&&s.tt>s.spurtAt&&s.tt-(s.slowAt==null?-9:s.slowAt)>1.5){
         s.spurted=true;
-        /* 本気を出すのは、いちばん おくれている子だけ */
+        /* 本気を出すのは うしろの子ほど なりやすい。
+           いま おそくなっている子（つかれた・ころんだ・水の中）は なりにくい */
         var run=s.m.filter(function(a){return !a.done;});
-        var who=run.slice().sort(function(p2,q2){return (p2.x-s.x0)*dirX-(q2.x-s.x0)*dirX;})[0];
+        var order2=run.slice().sort(function(p2,q2){return (p2.x-s.x0)*dirX-(q2.x-s.x0)*dirX;});
+        var pool=order2.map(function(a,idx){
+          var w=[3,1.6,1,.7,.5][Math.min(idx,4)]||.4;
+          if((a.slow||0)>0||(a.trip||0)>0||a.inWet)w*=.25;
+          return [a,w];
+        });
+        var who=pool.length?weighted(pool):null;
         if(who){who.dash=rand(.9,1.3);P.say(who,pick(["ここからが 本気！","ラストスパート！"]),1.4);P.note(who.x,P.headY(who)-6,"ビューン","#E9A93B");}
       }
       /* いちばん前の子と、コースの どのあたりかを 見る */
@@ -332,12 +340,12 @@ ACT.race={
       var total=Math.abs(s.x1-s.x0)||1,frac=lead/total;
       /* 先頭が つかれて ペースダウン（ぬかれる きっかけ） */
       if(!s.tired&&s.tt>s.tiredAt&&frac<.62&&leadA){
-        s.tired=true;leadA.slow=rand(1.1,1.6);
+        s.tired=true;s.slowAt=s.tt;leadA.slow=rand(1.1,1.6);
         P.say(leadA,pick(["はあ、つかれた〜","ちょっと ペースダウン…"]),1.4);
       }
       /* たまに 先頭が ころぶ */
       if(!s.tripped&&s.tt>s.tripAt&&frac<.72&&leadA){
-        s.tripped=true;leadA.trip=.8;P.say(leadA,"わっ、ころんじゃった〜",1.4);P.jump(leadA,1.6);
+        s.tripped=true;s.slowAt=s.tt;leadA.trip=.8;P.say(leadA,"わっ、ころんじゃった〜",1.4);P.jump(leadA,1.6);
       }
       s.m.forEach(function(a){
         if(a.done)return;
