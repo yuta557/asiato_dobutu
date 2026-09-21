@@ -557,7 +557,7 @@ ACT.oni={
     addProp(s,{y:1e9,draw:function(g){
       if(P.sessions.indexOf(s)<0||s.st>1)return;
       var left=Math.max(0,Math.ceil(ONI_SEC-(s.t-(s.runT0==null?s.t:s.runT0))));
-      var fs=Math.round(clamp(P.U*.55,13,22)),txt="のこり "+left+"びょう";
+      var fs=Math.round(clamp(P.U*.55,13,34)),txt="のこり "+left+"びょう";
       g.save();
       g.font="700 "+fs+"px 'Zen Maru Gothic',sans-serif";g.textAlign="center";g.textBaseline="middle";
       /* いちばん上（空のところ）に 出す。どうぶつや ふきだしと かさならない */

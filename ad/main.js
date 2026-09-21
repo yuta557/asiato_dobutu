@@ -61,7 +61,7 @@ function sizeAll(){
   W=Math.max(300,r.width);H=Math.max(300,r.height);AD.R=boardDpr();
   cv.width=Math.round(W*AD.R);cv.height=Math.round(H*AD.R);ctx.setTransform(AD.R,0,0,AD.R,0,0);ctx.__pats=null;
   S.build(W,H,AD.R);
-  P.U=clamp(Math.min(W,H)*.075,24,40);pu=P.U*.34;footP=AD.footPath(pu);
+  P.U=clamp(Math.min(W,H)*.072,24,110);pu=P.U*.34;footP=AD.footPath(pu);
   P.setCapacity();if(P.animals.length)P.trim();
   if(oW&&oH&&(oW!==W||oH!==H))P.animals.forEach(function(a){a.x=a.x/oW*W;a.y=clamp(a.y/oH*H,S.top,S.bottom);a.tx=a.x;a.ty=a.y;});
 }

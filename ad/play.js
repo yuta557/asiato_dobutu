@@ -626,7 +626,7 @@ P.drawOverlay=function(g){
   /* ふきだしどうしが重ならないように、あとから出たものを横か上にずらす */
   for(var k=P.bubbles.length-1;k>=0;k--){var bb=P.bubbles[k];if((now-bb.born)/bb.dur>=1||P.animals.indexOf(bb.a)<0)P.bubbles.splice(k,1);}
   P.bubbles.sort(function(p,q){return p.born-q.born;});
-  var placed=[],fs=Math.round(clamp(P.U*.5,13,19));
+  var placed=[],fs=Math.round(clamp(P.U*.5,13,30));
   g.font=fs+"px Yomogi,'Zen Maru Gothic',sans-serif";
   function hitPlaced(x,y,w2,h2){for(var i=0;i<placed.length;i++){var o=placed[i];if(x<o.x+o.w+6&&x+w2+6>o.x&&y<o.y+o.h+4&&y+h2+4>o.y)return o;}return null;}
   for(k=0;k<P.bubbles.length;k++){

@@ -68,7 +68,7 @@ S.pondSpot=function(fromX){var p=S.pond,side=fromX<p.x?-1:1;return {x:p.x+side*(
 /* ---- かくれんぼの しげみ（最初と同じ 2つ・位置も固定）----
    どうぶつと前後が入れかわる */
 function buildCovers(W,H,R){
-  var br=AD.clamp(Math.min(W,H)*.085,32,58);
+  var br=AD.clamp(Math.min(W,H)*.085,32,130);
   var covers=[{kind:"bush",x:W*.22,y:H*.58,r:br},{kind:"bush",x:W*.90,y:H*.86,r:br*.9}];
   covers.forEach(function(b,bi){
     b.img=sprite(b.r*3.2,b.r*2.1,R,function(bg){
@@ -96,7 +96,7 @@ S.build=function(W,H,R){
   g.fillStyle=sky;g.fillRect(0,0,W,hz+40);
   band(g,W,H,hz+8,H*.07,"#D2E6B4",r,2.4);
   /* 木（丘の上） */
-  var tx=W*.09,ty=hz+10,ts=AD.clamp(Math.min(W,H)*.09,34,64);
+  var tx=W*.09,ty=hz+10,ts=AD.clamp(Math.min(W,H)*.09,34,140);
   g.fillStyle="#9C7352";g.fillRect(tx-ts*.07,ty-ts*.9,ts*.14,ts*.95);
   var can=new Path2D();
   [[-.35,-1.1,.42],[.3,-1.15,.45],[0,-1.5,.5],[-.05,-1.05,.45]].forEach(function(b){AD.circle(can,tx+b[0]*ts,ty+b[1]*ts,b[2]*ts);});
@@ -107,7 +107,7 @@ S.build=function(W,H,R){
   band(g,W,H,hz+34,H*.02,m,r,5.1);
   hatch(g,0,hz,W,H-hz,Math.round(W*H/700),["rgba(118,168,86,.06)","rgba(255,255,255,.12)","rgba(150,190,110,.06)"],r);
   /* 池 */
-  var prx=AD.clamp(W*.085,48,110),p=S.pond={x:W*.80,y:H*.52,rx:prx,ry:prx*.30};
+  var prx=AD.clamp(W*.085,48,240),p=S.pond={x:W*.80,y:H*.52,rx:prx,ry:prx*.30};
   g.fillStyle="#B5DDEF";g.strokeStyle="#92C6DC";g.lineWidth=2;
   g.beginPath();g.ellipse(p.x,p.y,p.rx,p.ry,0,0,TAU);g.fill();g.stroke();
   g.strokeStyle="rgba(255,255,255,.75)";g.lineWidth=1.4;
@@ -116,17 +116,19 @@ S.build=function(W,H,R){
   [-1,-.92,.9,.97].forEach(function(k,i){var x=p.x+k*p.rx,y=p.y+(i%2?.1:-.2)*p.ry;AD.line(g,x,y,x+(k<0?-3:3),y-16-i*3);});
   /* 草・花 */
   S.flowers=[];
+  /* 画面が 大きい ときは、草や 花も おなじ わりあいで 大きくする */
+  var sc=AD.clamp(Math.min(W,H)/560,.8,3);
   for(var i=0;i<150;i++){
-    var gx=r()*W,gy=hz+30+r()*(H-hz-30),k=S.depth(gy);
+    var gx=r()*W,gy=hz+30+r()*(H-hz-30),k=S.depth(gy)*sc;
     if(S.inPond(gx,gy,1.05))continue;
     g.strokeStyle="rgba(118,172,86,"+(.45+r()*.35).toFixed(2)+")";g.lineWidth=1.3*k;
     var s=7*k;AD.line(g,gx-s*.5,gy-s,gx,gy);AD.line(g,gx,gy-s*1.3,gx,gy);AD.line(g,gx+s*.6,gy-s*.9,gx,gy);
   }
   var FC=["#FFFFFF","#FFE07A","#F6A8BF","#C9B8F0"];
   for(var j=0;j<30;j++){
-    var fx=20+r()*(W-40),fy=S.top-10+r()*(S.bottom-S.top),fk=S.depth(fy);
+    var fx=20+r()*(W-40),fy=S.top-10+r()*(S.bottom-S.top),fk=S.depth(fy)*sc;
     if(S.inPond(fx,fy,1.3))continue;
-    g.strokeStyle="#7FB05E";g.lineWidth=1.2;AD.line(g,fx,fy,fx,fy-7*fk);
+    g.strokeStyle="#7FB05E";g.lineWidth=1.2*sc;AD.line(g,fx,fy,fx,fy-7*fk);
     g.fillStyle=FC[j%4];
     for(var q=0;q<5;q++){var a=q/5*TAU;g.beginPath();g.arc(fx+Math.cos(a)*3*fk,fy-9*fk+Math.sin(a)*3*fk,2.4*fk,0,TAU);g.fill();}
     g.fillStyle="#F2A33C";g.beginPath();g.arc(fx,fy-9*fk,1.7*fk,0,TAU);g.fill();
@@ -143,7 +145,7 @@ S.drawBack=function(g,dt){
   var ci=S.cloudImg;
   S.clouds.forEach(function(cl){
     cl.x+=cl.v*dt;if(cl.x>1.15)cl.x=-.15;
-    var w=ci.w*cl.s*AD.clamp(S.W/900,.6,1.2),h=ci.h*cl.s*AD.clamp(S.W/900,.6,1.2);
+    var w=ci.w*cl.s*AD.clamp(S.W/900,.6,3),h=ci.h*cl.s*AD.clamp(S.W/900,.6,3);
     g.drawImage(ci,cl.x*S.W-w/2,Math.min(cl.y*S.H,S.horizon-h),w,h);
   });
 };
