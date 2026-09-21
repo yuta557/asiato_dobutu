@@ -11,7 +11,7 @@
 <style>
 :root{
   color-scheme:light;
-  --bg:#F8F4EA; --card:#FFFFFF; --ink:#123F63; --ink-soft:#5A7E99; --line:#D6E5EF;
+  --bg:#FAF8F2; --card:#FFFFFF; --ink:#123F63; --ink-soft:#5A7E99; --line:#D6E5EF;
   --yellow:#FFD43B; --wash-yellow:#FFF3CE; --leaf:#5E9B4A; --leaf-wash:#E6F1D6;
 }
 *{box-sizing:border-box}
@@ -19,14 +19,26 @@ body{margin:0;background:var(--bg);color:var(--ink);font-family:"Zen Kaku Gothic
 .page{max-width:1140px;margin:0 auto;padding:44px 24px 56px;display:flex;flex-direction:column;gap:26px}
 .head{display:block}
 h1{margin:0;font-family:"Zen Maru Gothic",sans-serif;font-weight:700;font-size:clamp(32px,5.4vw,54px);line-height:1.15;letter-spacing:.02em}
-/* 見出しは 手がきの バナー */
-.banner{margin:0}
-.banner img{display:block;width:100%;height:auto;border-radius:18px}
+/* 見出しは 手がきの タイトル */
+.banner{margin:0 auto;max-width:min(760px,86%)}
+.banner img{display:block;width:100%;height:auto}
+/* タイトルと ボードの まわりの かざり（くも・おひさま・草花） */
+.hero{position:relative;display:flex;flex-direction:column;gap:16px;padding:4px clamp(0px,3.4vw,44px) 10px}
+.hero .board{position:relative;z-index:1}
+.deco{position:absolute;inset:0;pointer-events:none;z-index:2}
+.deco img{position:absolute;display:block}
+.deco .d-cl{left:0;top:4px;width:clamp(74px,12vw,140px)}
+.deco .d-sun{right:2px;top:0;width:clamp(48px,7.5vw,88px)}
+.deco .d-cr{right:0;top:clamp(74px,10vw,116px);width:clamp(70px,11vw,126px)}
+.deco .d-pl{left:-8px;bottom:-4px;width:clamp(76px,12vw,132px)}
+.deco .d-pr{right:-8px;bottom:-4px;width:clamp(72px,11vw,122px)}
+@media(max-width:700px){.deco .d-cr{display:none}.banner{max-width:94%}
+  .deco .d-pl,.deco .d-pr{width:clamp(64px,18vw,96px)}}
 .lead{margin:0;max-width:36em;font-size:15.5px}
 .lead b{font-weight:500;background:linear-gradient(transparent 62%,var(--wash-yellow) 62%)}
 @media(max-width:760px){.head{grid-template-columns:1fr}.page{padding:30px 14px 44px;gap:22px}}
 
-.board{position:relative;border-radius:20px;border:1px solid var(--line);background:var(--card);overflow:hidden}
+.board{position:relative;border-radius:18px;border:2px solid #AFD3EC;background:var(--card);overflow:hidden}
 .board-bar{display:flex;align-items:center;gap:10px;padding:10px 12px 10px 16px;border-bottom:1px solid var(--line);background:var(--bg);flex-wrap:wrap}
 .dot{width:9px;height:9px;border-radius:50%;background:var(--line)}
 .board-title{font-size:13px;color:var(--ink-soft);margin-right:auto}
@@ -156,14 +168,17 @@ h1{margin:0;font-family:"Zen Maru Gothic",sans-serif;font-weight:700;font-size:c
 </head>
 <body>
 <main class="page">
-  <header class="head">
-    <h1 class="banner">
-      <picture>
-        <source media="(min-width:700px)" srcset="img/header-wide.webp">
-        <img src="img/header.webp" alt="あしあとどうぶつ ― 歩いたあとから、どうぶつが生まれる。" width="2000" height="667">
-      </picture>
-    </h1>
-  </header>
+  <div class="hero">
+    <div class="deco" aria-hidden="true">
+      <img class="d-cl" src="img/deco-cloud-l.png" alt="">
+      <img class="d-sun" src="img/deco-sun.png" alt="">
+      <img class="d-cr" src="img/deco-cloud-r.png" alt="">
+      <img class="d-pl" src="img/deco-plant-l.png" alt="">
+      <img class="d-pr" src="img/deco-plant-r.png" alt="">
+    </div>
+    <header class="head">
+      <h1 class="banner"><img src="img/title.png" alt="あしあとどうぶつ ― 歩いたあとから、どうぶつが生まれる。" width="1092" height="238"></h1>
+    </header>
 
   <div class="board hint" id="board">
     <div class="board-bar">
@@ -195,6 +210,7 @@ h1{margin:0;font-family:"Zen Maru Gothic",sans-serif;font-weight:700;font-size:c
       </div>
     </div>
     <div class="tip" aria-live="polite"><span class="pip"></span><span id="tipText"><span class="tip-pc">ドラッグでなぞる形や、クリックの回数で、うまれるどうぶつが変わるよ</span><span class="tip-sp">指でなぞる形や、タップの回数で、うまれるどうぶつが変わるよ</span></span></div>
+  </div>
   </div>
 
   <section class="zukan" aria-labelledby="zk">
