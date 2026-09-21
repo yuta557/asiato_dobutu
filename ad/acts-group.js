@@ -360,7 +360,7 @@ ACT.race={
       var total=Math.abs(s.x1-s.x0)||1,frac=lead/total;
       /* 先頭が つかれて ペースダウン（ぬかれる きっかけ） */
       if(!s.tired&&s.tt>s.tiredAt&&frac<.62&&leadA){
-        s.tired=true;s.slowAt=s.tt;leadA.slow=rand(1.1,1.6);
+        s.tired=true;s.slowAt=s.tt;leadA.slow=rand(1.6,2.3);   /* もっと しっかり ペースダウン */
         P.say(leadA,pick(["はあ、つかれた〜","ちょっと ペースダウン…"]),1.4);
       }
       /* たまに 先頭が ころぶ */
@@ -377,7 +377,7 @@ ACT.race={
         var near=frac<.68?1:.04;
         var chase=1+Math.min(.22,Math.max(0,(lead-(a.x-s.x0)*dirX)/a.u)*.06)*near;
         var kick=(a===leadA&&frac>=.68)?1.2:1;
-        go(a,s.x1+dirX*a.u*.6,a.lane,a.spd*chase*kick*(a.boost>0?1.5:1)*(a.slow>0?.72:1));
+        go(a,s.x1+dirX*a.u*.6,a.lane,a.spd*chase*kick*(a.boost>0?1.5:1)*(a.slow>0?.55:1));
         if((a.x-s.x1)*dirX>-a.u*.06){
           a.done=true;a.hold=true;a.doneT=s.tt;s.order.push(a);
           var place=s.order.length;
