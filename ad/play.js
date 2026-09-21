@@ -633,11 +633,20 @@ P.drawOverlay=function(g){
     var b=P.bubbles[k],w=(now-b.born)/b.dur,a=b.a;
     var tw=g.measureText(b.text).width,bw=tw+fs*1.1,bh=fs*1.75;
     var ax=a.x+a.dir*(a.sp.kind==="hand"?a.u*.3:0),ay=P.headY(a)-8-w*4;
-    var bx=clamp(ax-bw/2,4,S.W-bw-4),by=Math.max(4,ay-bh),o0=hitPlaced(bx,by,bw,bh);
-    if(o0){
-      var sx=ax<o0.x+o0.w/2?o0.x-bw-8:o0.x+o0.w+8;
-      if(sx>=4&&sx+bw<=S.W-4&&!hitPlaced(sx,by,bw,bh))bx=sx;
-      else{for(var tries=0;tries<4;tries++){var o1=hitPlaced(bx,by,bw,bh);if(!o1)break;by=o1.y-bh-6;}by=Math.max(4,by);}
+    var bx=clamp(ax-bw/2,4,S.W-bw-4),by=Math.max(4,ay-bh);
+    /* ずらす場所は 出すときに 一度だけ きめて、あとは かえない。
+       とちゅうで 動くと、おなじ ことばを 2回 言ったように 見えてしまう */
+    if(b.ox==null){
+      var o0=hitPlaced(bx,by,bw,bh);
+      if(o0){
+        var sx=ax<o0.x+o0.w/2?o0.x-bw-8:o0.x+o0.w+8;
+        if(sx>=4&&sx+bw<=S.W-4&&!hitPlaced(sx,by,bw,bh))bx=sx;
+        else{for(var tries=0;tries<4;tries++){var o1=hitPlaced(bx,by,bw,bh);if(!o1)break;by=o1.y-bh-6;}by=Math.max(4,by);}
+      }
+      b.ox=bx-ax;b.oy=by-ay;
+    }else{
+      bx=clamp(ax+b.ox,4,S.W-bw-4);
+      by=Math.max(4,ay+b.oy);
     }
     placed.push({x:bx,y:by,w:bw,h:bh});
     g.save();g.globalAlpha=(b.keep?1:Math.min(1,w*8))*(1-clamp((w-.8)/.2,0,1))*a.alpha;
