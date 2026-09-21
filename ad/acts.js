@@ -700,6 +700,12 @@ var ACT={
       else if(s.st===1){tapLine(a,"hideShh",["しーっ！","みつかっちゃうよ〜"]);
         if(fx(s,1.6))P.later(.6,function(){if(alive(s,k))P.say(k,"あれ？ いま、こえがした？",1.4);});}
       else if(s.st===2){tapLine(a,"hideOops",["あっ、こえ でちゃった！","しーっ…！"]);
+        /* こえが したら、おにも 気づいて そっちを むく */
+        if(fx(s,1.4))P.later(.45,function(){
+          if(!alive(s,k))return;
+          faceTo(k,a);
+          P.say(k,pick(["あれっ、なにか きこえたぞ","いま、こえが したぞ〜","そっちかな…？"]),1.5);
+        });
         if(!s.revealed){s.revealed=true;s.route=[];k.hold=false;goSeek(s,k);}}
       else tapLine(a,"hideFound",["みつかっちゃった〜","つぎは みつからないぞ〜"]);
     }},
