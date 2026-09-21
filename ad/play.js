@@ -422,9 +422,15 @@ function stepAnimal(a,dt){
         P.note(a.x,a.y-a.u*.25,"ぱしゃ","#4A92C6");
         for(var sp2=0;sp2<7;sp2++)P.sparks.push({x:a.x,y:a.y,a:-PI*(.15+.7*sp2/6),born:P.now,col:2,u:a.u*.8});
       }
-      /* 入ったときに ひとこと（おなじ子は しばらく 言わない） */
+      /* 入ったときに ひとこと（おなじ子は しばらく 言わない）。
+         ふだん 歩いているとき だけ 水の ことを 言う。
+         よーいどん・だるまさんがころんだ では「おくれちゃう！」、
+         ふえおに など ほかの あそびでは 何も 言わない（ふきだしが 多くなりすぎる） */
       if(!a.inWet){a.inWet=true;
-        if(P.now-(a.wetT==null?-99:a.wetT)>7){a.wetT=P.now;P.say(a,AD.pick(["みずに 入っちゃった〜","つめたーい！","ばしゃばしゃ！"]),1.4);}
+        var wty=a.sess&&a.sess.type,wline=null;
+        if(!a.sess)wline=AD.pick(["みずに 入っちゃった〜","つめたーい！","ばしゃばしゃ！"]);
+        else if(wty==="race"||wty==="daruma")wline=AD.pick(["まって〜、おくれちゃう！","みずで おそくなる〜","わっ、みずだ！ いそがなきゃ"]);
+        if(wline&&P.now-(a.wetT==null?-99:a.wetT)>7){a.wetT=P.now;P.say(a,wline,1.4);}
       }
     }else a.inWet=false;
     /* つなひきのように、うしろに下がっても向きを変えない */
