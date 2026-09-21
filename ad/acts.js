@@ -999,10 +999,13 @@ ACT.mizu={
     var p=S.pond;
     s.m.forEach(function(a){a.wet=Math.max(0,(a.wet||0)-dt);a.shake=a.wet>0?Math.sin(P.now*42)*a.u*.05:0;});
     if(s.st===0){
-      if(s.m.every(arrived)||s.tt>7){
+      /* ちゃんと いけの そばに ついてから はじめる（はなれた ところで みずあそびを しない） */
+      var atPond=s.m.every(function(a){return Math.hypot(a.x-p.x,(a.y-p.y)*1.25)<p.rx*1.9+a.u*1.8;});
+      if(atPond&&(s.m.every(arrived)||s.tt>9)){
         s.m.forEach(function(a){a.hold=true;a.face=p.x>a.x+2?1:p.x<a.x-2?-1:(a.dir||1);a.dir=a.face;});
         next(s);s.k=.5;
       }
+      else if(s.tt>14)return true;   /* いけまで 行けなかった ときは やめる */
       return;
     }
     if(s.st===2)return goodbye(s,s.m[0],s.m[1],s.tt,1.2);
@@ -1165,7 +1168,7 @@ function drawMat(g,s){
     var cw=u*1.35,ch=cw*(im.naturalHeight/im.naturalWidth);
     var rowI=rows>1&&i%2?1:0;
     var fx=cx+(nc===1?0:(i/(nc-1)-.5)*(w*.56))+(rowI?u*.4:0);
-    var fy=G.y+u*.38-rowI*u*.9;
+    var fy=G.y+u*.33-rowI*u*.85;
     g.drawImage(im,fx-cw/2,fy-ch*.55,cw,ch);
   }
 }
@@ -1257,7 +1260,7 @@ function spectate(dt){
     s.seats.forEach(function(a){
       if(a.galGave||a.galI==null||fans.indexOf(a)<0)return;
       var gi=clamp(a.galI,0,s.gal.n*2-1),col=gi%s.gal.n,row=Math.floor(gi/s.gal.n);
-      var qx=s.gal.x0+s.gal.gap*col+(row?s.gal.gap*.5:0),qy=s.gal.y+a.u*.55-row*a.u*.9;
+      var mu0=s.matU||P.U,qx=s.gal.x0+s.gal.gap*col+(row?s.gal.gap*.5:0),qy=s.gal.y+mu0*.5-row*mu0*.85;
       comingN++;
       if(Math.hypot(a.x-qx,(a.y-qy)*1.3)<a.u*3)nearN++;
     });
@@ -1285,7 +1288,8 @@ function spectate(dt){
     if(G){
       var gi=clamp(a.galI==null?0:a.galI,0,G.n*2-1),col=gi%G.n,row=Math.floor(gi/G.n);
       /* ざぶとんの 上に すわって 見えるよう、すこし 下に */
-      var sx=G.x0+G.gap*col+(row?G.gap*.5:0),sy=G.y+a.u*.55-row*a.u*.9;
+      var mu=s.matU||P.U;
+      var sx=G.x0+G.gap*col+(row?G.gap*.5:0),sy=G.y+mu*.5-row*mu*.85;
       var sd=Math.hypot(a.x-sx,(a.y-sy)*1.3);
       if(sd>a.u*.45){
         /* ちゃんと すすめているか 見ておく。ふさがれて 進めないまま だと
@@ -1306,7 +1310,7 @@ function spectate(dt){
             if(si===a.galI)continue;
             if(s.seats&&s.seats.some(function(z){return z!==a&&z.galI===si;}))continue;
             var c2=si%G.n,r2=Math.floor(si/G.n);
-            var ax2=G.x0+G.gap*c2+(r2?G.gap*.5:0),ay2=G.y+a.u*.55-r2*a.u*.9;
+            var ax2=G.x0+G.gap*c2+(r2?G.gap*.5:0),ay2=G.y+mu*.5-r2*mu*.85;
             if(A0&&ax2>A0.l-a.u*.4&&ax2<A0.r+a.u*.4&&ay2>A0.t-a.u*.4&&ay2<A0.b-a.u*.25)continue;
             var d2=Math.hypot(a.x-ax2,(a.y-ay2)*1.3);
             if(d2<ad2){ad2=d2;alt=si;}
@@ -1430,7 +1434,12 @@ X.schedule=function(dt){
   var a=pick(free),b=free.filter(function(o){return o!==a;}).sort(function(p,q){return AD.dist(a,p)-AD.dist(a,q);})[0];
   var near=free.filter(function(o){return o!==a;}).sort(function(p,q){return AD.dist(a,p)-AD.dist(a,q);});
   var hasEle=a.sp.key==="foot2"||b.sp.key==="foot2";
-  var type=weighted([["tag",3],["ball",2.5],["hide",2.5],["dance",2],["mizu",hasEle?4:2]]);
+  /* いけから とおい ところに いる子は みずあびを えらばない */
+  var pw2=S.pond,mid={x:(a.x+b.x)/2,y:(a.y+b.y)/2};
+  var farPond=!pw2||Math.hypot(mid.x-pw2.x,(mid.y-pw2.y)*1.25)>pw2.rx*3+P.U*8;
+  var list2=[["tag",3],["ball",2.5],["hide",2.5],["dance",2]];
+  if(!farPond)list2.push(["mizu",hasEle?4:2]);
+  var type=weighted(list2);
   var mem=Math.random()<.5?[a,b]:[b,a];
   /* ボールあそび・ダンス・みずあびは、近くに ほかの子がいれば 3〜4ひきで */
   if(type==="ball"&&near.length>=2&&Math.random()<.65){mem.push(near[1]);if(near.length>=3&&Math.random()<.45)mem.push(near[2]);}
