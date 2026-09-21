@@ -116,6 +116,11 @@ ACT.daruma={
     s.ox=s.side<0?u*1.5:S.W-u*1.5;
     var sx=s.side<0?S.W-u*1.4:u*1.4;
     s.players=s.m.slice(1);s.caught=[];s.round=0;
+    /* はやさは どうぶつの 種類（ぴょんぴょん・よちよち）や 体の大きさで
+       決まらないように ならす（よーいどんと 同じ やり方）。
+       ただし その回ごとの ランダムで、すこし はやい子・おそい子は 出る */
+    var u0=s.players.length?s.players[0].u:u;
+    s.players.forEach(function(p){p.even=(u0/p.u)*rand(.92,1.12);});
     /* いまの 上下の ならび順のまま レーンを わりあてる（すれちがわない）。
        ならべない子は 見るがわへ */
     s.players.sort(function(p,q){return p.y-q.y;});
