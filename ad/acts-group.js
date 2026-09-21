@@ -91,7 +91,13 @@ X.laneRoom=function(u,minK){return Math.max(2,Math.floor((S.bottom-S.top-u*2.6)/
 function lineUp(s,x,keep){
   s.m.slice().forEach(function(a){
     var gx=(a.startX!=null?a.startX:x);
-    if(Math.abs(a.x-gx)<a.u*3.5||a===keep||s.m.length<=2){a.x=gx;if(a.lane!=null)a.y=a.lane;return;}
+    if(Math.abs(a.x-gx)<a.u*3.5||a===keep||s.m.length<=2){
+      /* 瞬間移動は させない（ぱっと 移るのは 見ている子の 席だけ）。
+         のこりは あるいて そろえ、ほんの すこしの ずれだけ ぴたりと 合わせる */
+      a.tx=gx;if(a.lane!=null)a.ty=a.lane;a.rest=0;
+      if(Math.abs(a.x-gx)<a.u*.3){a.x=gx;if(a.lane!=null)a.y=a.lane;}
+      return;
+    }
     var i=s.m.indexOf(a);s.m.splice(i,1);
     if(s.players){var j=s.players.indexOf(a);if(j>=0)s.players.splice(j,1);}
     a.sess=null;a.hold=false;a.face=0;a.faceLock=false;a.mult=1;a.lane=null;a.rest=rand(.3,1);a.cool=rand(4,8);
@@ -137,12 +143,10 @@ ACT.daruma={
       var row=i%ys.length,rank=Math.floor(i/ys.length);
       p.lane=ys[row];p.rank=rank;
       p.startX=clamp(sx+away*rank*u*1.7,u*1.2,S.W-u*1.2);
-      /* スタートが とおい子は かけ足で むかう */
-      var far2=Math.abs(p.startX-p.x)>p.u*7;
-      go(p,p.startX,p.lane,far2?2.1:1.5);
-      if(far2&&!s.hurry)s.hurry=p;
+      /* スタートへ むかう。とおい子の かけ足と ひとことは、
+         あそび共通の しくみ（hurryFar）に まかせる（はやすぎる 二重がけを ふせぐ） */
+      go(p,p.startX,p.lane,1.5);
     });
-    if(s.hurry)P.later(.5,function(){if(alive(s,s.hurry)&&s.st===0)P.say(s.hurry,"いそげ〜！",1.3);});
     P.say(oni,"わたしが おにね！",1.3);
   },
   update:function(s,dt){
@@ -151,7 +155,9 @@ ACT.daruma={
       /* ならび終わった子から、おにの ほうを 向いて まつ（うしろ向きのままに しない） */
       (s.players||[]).forEach(function(p){if(arrived(p)){p.face=-s.side;p.dir=-s.side;}});
       if(allThere(s,null,15)){
-        lineUp(s,s.sx,oni);oni.x=s.ox;oni.y=s.oy;
+        lineUp(s,s.sx,oni);
+        go(oni,s.ox,s.oy,1.2);
+        if(Math.hypot(oni.x-s.ox,oni.y-s.oy)<oni.u*.4){oni.x=s.ox;oni.y=s.oy;}
         if(s.players.length<1)return true;
         s.m.forEach(function(a){a.hold=true;});
         oni.face=s.side;oni.dir=s.side;
@@ -281,7 +287,7 @@ ACT.race={
       a.lane=ys[i];
       /* スタートが とおい子は かけ足で むかう */
       var far=Math.abs(s.x0-a.x)>a.u*7;
-      go(a,s.x0,ys[i],far?2.1:1.5);
+      go(a,s.x0,ys[i],1.5);   /* とおい子の かけ足は 共通の しくみ（hurryFar）に まかせる */
       if(far&&!hurry)hurry=a;
     });
     if(hurry)P.later(.5,function(){if(alive(s,hurry)&&s.st===0)P.say(hurry,"いそげ〜！",1.3);});

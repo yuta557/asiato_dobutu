@@ -1126,7 +1126,7 @@ X.tick=function(s,dt){
   /* あそびの 指示（go）の あとで、遠い子だけ 早足に する */
   s.m.forEach(function(a){
     if(!a.hurryT||P.now>a.hurryT){a.hurryT=0;return;}
-    if(Math.hypot(a.tx-a.x,a.ty-a.y)>a.u*3)a.mult=(a.mult||1)*1.35;
+    if(Math.hypot(a.tx-a.x,a.ty-a.y)>a.u*3)a.mult=Math.min((a.mult||1)*1.35,1.7);
     else a.hurryT=0;
   });
 };
