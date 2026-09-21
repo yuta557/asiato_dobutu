@@ -16,14 +16,14 @@
 }
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);font-family:"Zen Kaku Gothic New","Hiragino Kaku Gothic ProN","Yu Gothic",Meiryo,sans-serif;font-size:15.5px;line-height:1.8;-webkit-font-smoothing:antialiased}
-.page{max-width:1140px;margin:0 auto;padding:44px 24px 56px;display:flex;flex-direction:column;gap:26px}
+.page{max-width:1140px;margin:0 auto;padding:18px 24px 56px;display:flex;flex-direction:column;gap:26px}
 .head{display:block}
 h1{margin:0;font-family:"Zen Maru Gothic",sans-serif;font-weight:700;font-size:clamp(32px,5.4vw,54px);line-height:1.15;letter-spacing:.02em}
 /* 見出しは 手がきの タイトル */
 .banner{margin:0 auto;max-width:min(760px,86%)}
 .banner img{display:block;width:100%;height:auto}
 /* タイトルと ボードの まわりの かざり（くも・おひさま・草花） */
-.hero{position:relative;display:flex;flex-direction:column;gap:16px;padding:4px clamp(0px,3.4vw,44px) 10px}
+.hero{position:relative;display:flex;flex-direction:column;gap:14px;padding:0 clamp(0px,3.4vw,44px) 10px}
 .hero .board{position:relative;z-index:1}
 .deco{position:absolute;inset:0;pointer-events:none;z-index:2}
 .deco img{position:absolute;display:block}
@@ -36,7 +36,7 @@ h1{margin:0;font-family:"Zen Maru Gothic",sans-serif;font-weight:700;font-size:c
   .deco .d-pl,.deco .d-pr{width:clamp(64px,18vw,96px)}}
 .lead{margin:0;max-width:36em;font-size:15.5px}
 .lead b{font-weight:500;background:linear-gradient(transparent 62%,var(--wash-yellow) 62%)}
-@media(max-width:760px){.head{grid-template-columns:1fr}.page{padding:30px 14px 44px;gap:22px}}
+@media(max-width:760px){.head{grid-template-columns:1fr}.page{padding:12px 14px 44px;gap:22px}}
 
 .board{position:relative;border-radius:18px;border:2px solid #AFD3EC;background:var(--card);overflow:hidden}
 .board-bar{display:flex;align-items:center;gap:10px;padding:10px 12px 10px 16px;border-bottom:1px solid var(--line);background:var(--bg);flex-wrap:wrap}
