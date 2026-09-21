@@ -556,7 +556,7 @@ ACT.oni={
     /* のこり時間を 草原の上に 出す */
     addProp(s,{y:1e9,draw:function(g){
       if(P.sessions.indexOf(s)<0||s.st>1)return;
-      var left=Math.max(0,Math.ceil(ONI_SEC-s.t));
+      var left=Math.max(0,Math.ceil(ONI_SEC-(s.t-(s.runT0==null?s.t:s.runT0))));
       var fs=Math.round(clamp(P.U*.55,13,22)),txt="のこり "+left+"びょう";
       g.save();
       g.font="700 "+fs+"px 'Zen Maru Gothic',sans-serif";g.textAlign="center";g.textBaseline="middle";
@@ -583,6 +583,7 @@ ACT.oni={
       if(s.count<2.2&&once(s,"c1"))P.say(oni0,"いーち、にーい…",1.4);
       if(s.count<=0){
         oni0.sleep=false;oni0.hold=false;oni0.face=0;
+        s.runT0=s.t;                 /* のこり時間は ここから かぞえる */
         P.say(oni0,"いくぞ〜！",1.2);
         var r0=pick(s.rs);if(r0)P.later(.4,function(){if(alive(s,r0))P.say(r0,"にげろ〜！",1.3);});
         s.talkT=2.5;next(s);
@@ -724,7 +725,7 @@ ACT.oni={
       s.joinT=(s.joinT==null?rand(2,3.5):s.joinT)-dt;
       if(s.joinT<=0){
         s.joinT=rand(2.5,4);
-        if(s.m.length<10&&s.t<ONI_SEC-8){
+        if(s.m.length<10&&s.t-(s.runT0||0)<ONI_SEC-8){
           var newby=P.animals.filter(function(a){return P.free(a)&&!a.chat&&!a.watch&&!a.helping;})
             .sort(function(p,q){return p.age-q.age;})[0];      /* うまれたての子から */
           if(newby){
@@ -739,7 +740,7 @@ ACT.oni={
         }
       }
       /* のこり時間を にげる子が 知らせる */
-      var left2=Math.ceil(ONI_SEC-s.t);
+      var left2=Math.ceil(ONI_SEC-(s.t-(s.runT0||0)));
       if(left2<=10&&s.rs.length&&once(s,"left10")){P.say(pick(s.rs),"のこり 10びょう！",1.5);s.talkT=Math.max(s.talkT,1.6);}
       if(left2<=5&&s.rs.length&&once(s,"left5")){P.say(pick(s.rs),"あと 5びょう、にげきるぞ〜！",1.5);s.talkT=Math.max(s.talkT,1.6);}
       s.talkT-=dt;
@@ -748,7 +749,7 @@ ACT.oni={
         if(Math.random()<.5&&s.rs.length)P.say(pick(s.rs),pick(["にげろ〜","こっちだよ〜","つかまらないぞ〜"]),1.2);
         else P.say(pick(s.onis),pick(["まてまて〜","つかまえるぞ〜","そっちに いった！"]),1.2);
       }
-      if(s.rs.length<=1||s.t>ONI_SEC){
+      if(s.rs.length<=1||s.t-(s.runT0||0)>ONI_SEC){
         s.m.forEach(function(a){a.hold=true;a.aim=null;});
         var last=s.rs[0];
         if(last){P.say(last,"さいごまで にげきった〜！",1.6);P.jump(last,4.6);
