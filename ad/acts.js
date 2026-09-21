@@ -71,19 +71,38 @@ function fx(s,cool){if(P.now-(s.fxT==null?-99:s.fxT)>cool){s.fxT=P.now;return tr
 /* にげる先をえらぶ。others＝ほかの にげる子（おなじ すみに かたまらないように はなれる） */
 /* ぎょうれつの ならぶ場所。よこに まっすぐ ならべない（はしに ついた）ときは、
    そこから 上か下に つづけて ならぶ */
-/* ぎょうれつの 先頭が「もと来た ほう」へ もどろうとする ときは、
-   そのまま 折り返すと じぶんの 列に つっこむので、まず 上か下へ 曲がる */
-function paradeTurn(s,L,p){
+/* ぎょうれつの 先頭の いまの むき */
+function paradeHead(s,L){
   var hx=0,hy=0,tl=s.trail;
   if(tl&&tl.length>=2){hx=tl[tl.length-1].x-tl[tl.length-2].x;hy=tl[tl.length-1].y-tl[tl.length-2].y;}
   if(!hx&&!hy){hx=L.tx-L.x;hy=L.ty-L.y;}
-  var hl=Math.hypot(hx,hy)||1;hx/=hl;hy/=hl;
-  var vx=p.x-L.x,vy=p.y-L.y,vl=Math.hypot(vx,vy)||1;
-  if((vx*hx+vy*hy)/vl>-.2)return null;             /* 折り返しでは ない */
-  var up=L.y-(S.top+L.u*.9),dn=(S.bottom-L.u*.7)-L.y,d=dn>up?1:-1;
-  var step=Math.max(L.u*3,Math.min(Math.max(up,dn),L.u*4.5));
-  return {x:clamp(L.x+hx*L.u*.8,L.u*1.2,S.W-L.u*1.2),
-          y:clamp(L.y+d*step,S.top+L.u*.9,S.bottom-L.u*.7)};
+  var hl=Math.hypot(hx,hy)||1;
+  return {x:hx/hl,y:hy/hl};
+}
+/* もどる かたちに なるときは、直角に 曲がった さきを 中つぎに する。
+   曲がる むきは あそびの あいだ ずっと おなじ（右まわり か 左まわり）に して、
+   行ったり来たり しないようにする */
+function paradeCorner(s,L){
+  var h=paradeHead(s,L);
+  if(!s.turnDir)s.turnDir=Math.random()<.5?1:-1;
+  for(var tries=0;tries<2;tries++){
+    var d={x:-h.y*s.turnDir,y:h.x*s.turnDir};
+    var px=clamp(L.x+d.x*L.u*5.5,L.u*1.5,S.W-L.u*1.5);
+    var py=clamp(L.y+d.y*L.u*3.5,S.top+L.u*1,S.bottom-L.u*.8);
+    if(Math.hypot(px-L.x,(py-L.y)*1.2)>L.u*2.2&&S.clear(px,py,L.u))return {x:px,y:py};
+    s.turnDir=-s.turnDir;
+  }
+  return null;
+}
+/* つぎの 行き先が もどる かたちなら、直角の 中つぎを はさむ */
+function paradeAim(s,L){
+  var p=s.wp[s.i];if(!p)return null;
+  var h=paradeHead(s,L),vx=p.x-L.x,vy=p.y-L.y,vl=Math.hypot(vx,vy)||1;
+  if((vx*h.x+vy*h.y)/vl<-.15){
+    var corner=paradeCorner(s,L);
+    if(corner){s.wp.splice(s.i,0,corner);return corner;}
+  }
+  return p;
 }
 function queueSpots(s,L,ax,ay){
   var list=s.m.slice(1),pts=[],px=ax,py=ay;
@@ -848,19 +867,16 @@ var ACT={
       /* 時間が きたら（先頭が つけなくても）おしまい */
       if(s.t>34){P.say(L,"とうちゃく！",1.3);s.m.forEach(function(a){a.hold=true;P.jump(a,3.2);});next(s);return;}
       if(arrived(L)){s.i++;if(s.i>=s.wp.length){P.say(L,"とうちゃく！",1.3);s.m.forEach(function(a){a.hold=true;P.jump(a,3.2);});next(s);return;}
-        /* もどる かたちに なるときは、まず 上か下へ 曲がってから */
-        var turn=paradeTurn(s,L,s.wp[s.i]);
-        if(turn)s.wp.splice(s.i,0,turn);
-        go(L,s.wp[s.i].x,s.wp[s.i].y,.9);}
+        var aim=paradeAim(s,L)||s.wp[s.i];
+        go(L,aim.x,aim.y,.9);}
       /* 先頭が すすめなくなったら、つぎの ばしょへ */
       if(Math.hypot(L.x-(s.lx==null?L.x-99:s.lx),L.y-(s.ly==null?L.y:s.ly))<L.u*.05){
         s.lt=(s.lt||0)+dt;
         if(s.lt>2.5){
           s.lt=0;s.i++;if(s.i>=s.wp.length)s.i=0;
-          var nx2=S.safeSpot(L.u*1.2,s.wp[s.i])||S.randomSpot(L.u*2);
-          var turn2=paradeTurn(s,L,nx2);
-          s.wp[s.i]=nx2;go(L,(turn2||nx2).x,(turn2||nx2).y,.95);
-          if(turn2)s.wp.splice(s.i,0,turn2);
+          s.wp[s.i]=S.safeSpot(L.u*1.2,s.wp[s.i])||S.randomSpot(L.u*2);
+          var aim2=paradeAim(s,L)||s.wp[s.i];
+          go(L,aim2.x,aim2.y,.95);
         }
       }else{s.lt=0;s.lx=L.x;s.ly=L.y;}
       /* うしろの子は、先頭が通った道をそのままたどる（しげみや文字にかぶらない） */
@@ -1199,7 +1215,7 @@ function spectate(dt){
   var s=P.sessions.filter(function(x){return x.m.length>=4&&WATCHABLE[x.type];})[0];
   var fans=P.animals.filter(function(a){return !a.sess&&!a.leaving&&!a.helping&&!a.chat&&a.age>=1.1;});
   if(!s){
-    P.animals.forEach(function(a){if(a.watch){a.watch=null;a.face=0;a.watchMove=false;a.galI=null;a.galSet=false;a.hold=false;a.galGave=false;a.seatT=0;a.seatAll=0;a.seatP=null;a.galSide=null;a.rest=rand(.6,2);}});
+    P.animals.forEach(function(a){if(a.watch){a.watch=null;a.face=0;a.watchMove=false;a.galI=null;a.galSet=false;a.hold=false;a.galGave=false;a.seatT=0;a.seatAll=0;a.seatSwap=0;a.seatP=null;a.galSide=null;a.rest=rand(.6,2);}});
     return;
   }
   /* あそびが はじまった ときに すぐ、何人 見るかを きめて シートを しく。そのあとは 動かさない */
@@ -1282,8 +1298,24 @@ function spectate(dt){
         /* 席が あそび場の まん中に なってしまったとき（歩いて 入れない）だけ あきらめる。
            手前の ふちは すわってよい */
         var A0=P.area,deep=A0&&sx>A0.l-a.u*.4&&sx<A0.r+a.u*.4&&sy>A0.t-a.u*.4&&sy<A0.b-a.u*.25;
-        if(deep||a.seatT>2.5||a.seatAll>12){
-          a.galI=null;a.galGave=true;a.seatT=0;a.seatAll=0;a.seatP=null;a.galSide=null;a.watchMove=false;a.galSet=false;
+        /* 席の すぐ そばまで 来ているなら、あきらめずに もう すこし ねばる */
+        if(deep||(a.seatT>2.5&&sd>a.u*2.5)||a.seatAll>16){
+          /* あいている ほかの席（近くて、あそび場に かかっていない）を ためしてみる */
+          var alt=null,ad2=1e9;
+          for(var si=0;si<G.n*2;si++){
+            if(si===a.galI)continue;
+            if(s.seats&&s.seats.some(function(z){return z!==a&&z.galI===si;}))continue;
+            var c2=si%G.n,r2=Math.floor(si/G.n);
+            var ax2=G.x0+G.gap*c2+(r2?G.gap*.5:0),ay2=G.y+a.u*.55-r2*a.u*.9;
+            if(A0&&ax2>A0.l-a.u*.4&&ax2<A0.r+a.u*.4&&ay2>A0.t-a.u*.4&&ay2<A0.b-a.u*.25)continue;
+            var d2=Math.hypot(a.x-ax2,(a.y-ay2)*1.3);
+            if(d2<ad2){ad2=d2;alt=si;}
+          }
+          if(alt!=null&&(a.seatSwap||0)<2&&a.seatAll<16){
+            a.galI=alt;a.seatSwap=(a.seatSwap||0)+1;a.seatT=0;a.seatP=null;a.galSide=null;
+          }else{
+            a.galI=null;a.galGave=true;a.seatT=0;a.seatAll=0;a.seatSwap=0;a.seatP=null;a.galSide=null;a.watchMove=false;a.galSet=false;
+          }
         }
         else{
           /* シートへ むかう とちゅうに ひとこと */
@@ -1320,7 +1352,7 @@ function spectate(dt){
       }
       if(a.galI!=null){
       /* すわったら うごかない（あしも 向きも そのまま）。することは おうえんの ことばだけ */
-      a.seatT=0;a.seatAll=0;a.seatP=null;a.galSide=null;
+      a.seatT=0;a.seatAll=0;a.seatSwap=0;a.seatP=null;a.galSide=null;
       if(!a.galSet){a.galSet=true;a.face=cx>a.x?1:-1;a.dir=a.face;}
       a.hold=true;a.moving=false;a.tx=a.x;a.ty=a.y;a.rest=1;a.mult=1;a.z=0;a.vz=0;
       return;

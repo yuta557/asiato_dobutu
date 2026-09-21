@@ -274,8 +274,16 @@ function petTarget(){
   return best;
 }
 function petPoint(a){return {x:a.x,y:AD.clamp(P.headY(a)+a.u*.9,20,H-20)};}
+/* 案内の タップ：ゆびで タップしたときと おなじ わっかを 出して、よく わかるようにする */
+function petTap(a,tp){
+  tapCursor();
+  ripples.push({x:tp.x,y:tp.y,born:P.now,n:1});
+  P.note(a.x,P.headY(a)-6,"タップ！","#E9A93B");
+  tapAnimal(a,tp.x);
+}
 function petStop(now,wait){
   petG.phase="idle";petG.a=null;petG.twice=false;
+  curEl.classList.remove("guide");
   if(wait)petGaveT=now;
   curEl.style.opacity="0";if(tipIsDemo)setTip(TIP0);
 }
@@ -285,6 +293,7 @@ function runPetGuide(now){
     if(now-madeAt<30||now-petGaveT<30)return false;
     var a0=petTarget();if(!a0)return false;
     petG.a=a0;petG.phase="move";petG.t0=now;petG.twice=false;
+    curEl.classList.add("guide");
     var p0=petPoint(a0);
     petG.from={x:AD.clamp(p0.x+(p0.x<W/2?-1:1)*W*.14,20,W-20),y:AD.clamp(p0.y-H*.12,20,H-20)};
     setTip("どうぶつを タップすると、おへんじ してくれるよ",true);
@@ -296,11 +305,11 @@ function runPetGuide(now){
   if(petG.phase==="move"){
     var v=AD.ease(clamp(el/.9,0,1));
     showCursor(petG.from.x+(tp.x-petG.from.x)*v,petG.from.y+(tp.y-petG.from.y)*v);
-    if(v>=1){petG.phase="tap";petG.t0=now;tapCursor();tapAnimal(a,tp.x);}
+    if(v>=1){petG.phase="tap";petG.t0=now;petTap(a,tp);}
     return true;
   }
   showCursor(tp.x,tp.y);
-  if(el>1.1&&!petG.twice){petG.twice=true;tapCursor();tapAnimal(a,tp.x);}
+  if(el>1.1&&!petG.twice){petG.twice=true;petTap(a,tp);}
   if(el>2.8)petStop(now,true);
   return true;
 }
