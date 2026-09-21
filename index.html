@@ -172,9 +172,10 @@ body.op-lock{overflow:hidden}
 #opening.op-out{opacity:0;pointer-events:none}
 /* あまった ところは、おなじ絵を ぼかして のばして うめる */
 #opening::before{content:"";position:absolute;inset:-8%;background:var(--bgimg) center/cover no-repeat;filter:blur(60px) saturate(1.06)}
-#opening .op-art{position:relative;z-index:1;flex:0 0 auto;width:max(100vw,min(calc(var(--ar)*100vh),128vw));aspect-ratio:var(--ar);-webkit-mask-image:linear-gradient(to bottom,transparent 0,#000 5%,#000 95%,transparent 100%);mask-image:linear-gradient(to bottom,transparent 0,#000 5%,#000 95%,transparent 100%)}
-@media(max-width:760px){#opening .op-art{width:max(138vw,min(calc(var(--ar)*100vh),100vw))}}
-#opening .op-bg{position:absolute;inset:0;background:var(--bgimg) center/100% 100% no-repeat}
+/* 絵は むりに 大きく しない（はみ出さない 大きさで おく）。よこの あまりは ぼかしで うめる */
+#opening .op-art{position:relative;z-index:1;flex:0 0 auto;width:min(95vw,calc(var(--ar)*92vh));aspect-ratio:var(--ar);-webkit-mask-image:linear-gradient(to right,transparent 0,#000 4%,#000 96%,transparent 100%);mask-image:linear-gradient(to right,transparent 0,#000 4%,#000 96%,transparent 100%)}
+@media(max-width:760px){#opening .op-art{width:min(100vw,calc(var(--ar)*88vh))}}
+#opening .op-bg{position:absolute;inset:0;background:var(--bgimg) center/100% 100% no-repeat;-webkit-mask-image:linear-gradient(to bottom,transparent 0,#000 5%,#000 95%,transparent 100%);mask-image:linear-gradient(to bottom,transparent 0,#000 5%,#000 95%,transparent 100%)}
 /* タイトルの 絵（966x258）を 草原の 上に おく */
 #opening .op-cap{position:absolute;left:10.70%;top:var(--capT);width:78.60%;aspect-ratio:966/258}
 #opening .op-rest{position:absolute;inset:0;width:100%;height:auto;opacity:0;transition:opacity .8s ease}
