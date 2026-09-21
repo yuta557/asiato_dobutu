@@ -650,32 +650,30 @@ P.drawOverlay=function(g){
   /* ふきだしどうしが重ならないように、あとから出たものを横か上にずらす */
   for(var k=P.bubbles.length-1;k>=0;k--){var bb=P.bubbles[k];if((now-bb.born)/bb.dur>=1||P.animals.indexOf(bb.a)<0)P.bubbles.splice(k,1);}
   P.bubbles.sort(function(p,q){return p.born-q.born;});
-  var dtB=Math.min(.12,Math.max(0,now-(P.bubT==null?now:P.bubT)));P.bubT=now;
   var placed=[],fs=Math.round(clamp(P.U*.5,13,30));
   g.font=fs+"px Yomogi,'Zen Maru Gothic',sans-serif";
-  function hitPlaced(x,y,w2,h2){for(var i=0;i<placed.length;i++){var o=placed[i];if(x<o.x+o.w+6&&x+w2+6>o.x&&y<o.y+o.h+4&&y+h2+4>o.y)return o;}return null;}
+  function hitPlaced(x,y,w2,h2){for(var i=0;i<placed.length;i++){var o=placed[i];if(o.fade)continue;
+    if(x<o.x+o.w+6&&x+w2+6>o.x&&y<o.y+o.h+4&&y+h2+4>o.y)return o;}return null;}
   for(k=0;k<P.bubbles.length;k++){
     var b=P.bubbles[k],w=(now-b.born)/b.dur,a=b.a;
     var tw=g.measureText(b.text).width,bw=tw+fs*1.1,bh=fs*1.75;
     var ax=a.x+a.dir*(a.sp.kind==="hand"?a.u*.3:0),ay=P.headY(a)-8-w*4;
     var bx=clamp(ax-bw/2,4,S.W-bw-4),by=Math.max(4,ay-bh);
-    /* ずらす先は 毎回 計算しなおす（ほかの ふきだしが 消えたら 頭の上へ もどる）。
-       ただし 場所は じわっと 動かす。ぱっと とぶと おなじ ことばを 2回 言ったように 見えるので */
-    var o0=hitPlaced(bx,by,bw,bh);
-    if(o0){
-      var sx=ax<o0.x+o0.w/2?o0.x-bw-8:o0.x+o0.w+8;
-      if(sx>=4&&sx+bw<=S.W-4&&!hitPlaced(sx,by,bw,bh))bx=sx;
-      else{for(var tries=0;tries<4;tries++){var o1=hitPlaced(bx,by,bw,bh);if(!o1)break;by=o1.y-bh-6;}by=Math.max(4,by);}
+    /* ずらす先は 出したての あいだ（0.3びょう）だけ 決めなおし、あとは うごかさない。
+       とちゅうで 動くと、おなじ ことばを 2回 言ったように 見えてしまう */
+    if(b.ox==null||w<.14){
+      var o0=hitPlaced(bx,by,bw,bh);
+      if(o0){
+        var sx=ax<o0.x+o0.w/2?o0.x-bw-8:o0.x+o0.w+8;
+        if(sx>=4&&sx+bw<=S.W-4&&!hitPlaced(sx,by,bw,bh))bx=sx;
+        else{for(var tries=0;tries<4;tries++){var o1=hitPlaced(bx,by,bw,bh);if(!o1)break;by=o1.y-bh-6;}by=Math.max(4,by);}
+      }
+      b.ox=bx-ax;b.oy=by-ay;
+    }else{
+      bx=clamp(ax+b.ox,4,S.W-bw-4);
+      by=Math.max(4,ay+b.oy);
     }
-    var tox=bx-ax,toy=by-ay;
-    if(b.ox==null){b.ox=tox;b.oy=toy;}
-    else{
-      var kB=1-Math.pow(.02,dtB);
-      b.ox+=(tox-b.ox)*kB;b.oy+=(toy-b.oy)*kB;
-    }
-    bx=clamp(ax+b.ox,4,S.W-bw-4);
-    by=Math.max(4,ay+b.oy);
-    placed.push({x:bx,y:by,w:bw,h:bh});
+    placed.push({x:bx,y:by,w:bw,h:bh,fade:w>.82});
     g.save();g.globalAlpha=(b.keep?1:Math.min(1,w*8))*(1-clamp((w-.8)/.2,0,1))*a.alpha;
     g.fillStyle="rgba(255,255,255,.95)";g.strokeStyle="rgba(58,44,36,.28)";g.lineWidth=1.2;
     rr(g,bx,by,bw,bh,bh/2);g.fill();g.stroke();

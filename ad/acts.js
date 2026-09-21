@@ -1195,6 +1195,10 @@ function gallery(n,u,near,fy){
                :[[A.b+u*1.7,0],[S.bottom-u*1.25,1],[S.bottom-u*.35,1]];
   /* みんなで かこむ あそび（つなひきなど）では、見る子が いる がわを 先に さがす
      （あそび場の むこうがわに 席を つくると、まわりこめずに ゆれてしまう） */
+  /* かこんで 見る あそび（つなひきなど）では、あそび場の 中に 席を 作らない
+     （プレイヤーと かさなって しまうため）。手前に 場所が なければ シートは 出さない */
+  if(!lane)rows=rows.filter(function(rw){return rw[0]>=A.b+u*1.1;});
+  if(!rows.length)return null;
   if(!lane&&fy!=null)rows=rows.slice().sort(function(p,q){return Math.abs(p[0]-fy)-Math.abs(q[0]-fy);});
   var lo=u*1.5+w/2,hi=S.W-u*1.5-w/2;
   var mid=clamp((A.l+A.r)/2,lo,hi);
