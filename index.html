@@ -1,3 +1,4 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1"><style>:root{color-scheme:light}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
 <!doctype html>
 <html lang="ja">
 <head>
@@ -30,7 +31,8 @@ h1{margin:0;font-family:"Zen Maru Gothic",sans-serif;font-weight:700;font-size:c
 .deco .d-cl{left:0;top:4px;width:clamp(74px,12vw,140px)}
 .deco .d-sun{right:2px;top:0;width:clamp(48px,7.5vw,88px)}
 .deco .d-cr{right:0;top:clamp(74px,10vw,116px);width:clamp(70px,11vw,126px)}
-@media(max-width:700px){.deco .d-cr{display:none}.banner{max-width:94%}}
+/* せまい画面では タイトルの 絵に おひさまが かさなるので、かざりを 引っこめる */
+@media(max-width:700px){.deco .d-cr,.deco .d-sun{display:none}.banner{max-width:94%}}
 .lead{margin:0;max-width:36em;font-size:15.5px}
 .lead b{font-weight:500;background:linear-gradient(transparent 62%,var(--wash-yellow) 62%)}
 @media(max-width:760px){.head{grid-template-columns:1fr}.page{padding:12px 14px 44px;gap:22px}}
@@ -72,9 +74,9 @@ h1{margin:0;font-family:"Zen Maru Gothic",sans-serif;font-weight:700;font-size:c
 @media(max-width:900px),(hover:none) and (pointer:coarse){.tip-pc{display:none}.tip-sp{display:inline}}
 
 .zukan{display:grid;grid-template-columns:200px minmax(0,1fr);gap:16px 28px;align-items:center}
-.zukan h2{margin:0;font-family:"Zen Maru Gothic",sans-serif;font-size:21px;line-height:1.4}
-.zukan .count{display:block;font-family:"IBM Plex Mono",monospace;font-size:13px;color:var(--ink-soft);font-variant-numeric:tabular-nums;margin-top:2px}
-.zukan .rule{margin:8px 0 0;font-size:13px;color:var(--ink-soft);line-height:1.7}
+.zukan h2{margin:0;font-family:"Zen Maru Gothic",sans-serif;font-size:24px;line-height:1.4}
+.zukan .count{display:block;font-family:"Zen Maru Gothic",sans-serif;font-weight:700;font-size:16px;color:#3E82AC;font-variant-numeric:tabular-nums;letter-spacing:.06em;margin-top:5px}
+.zukan .rule{margin:9px 0 0;font-size:13px;color:var(--ink-soft);line-height:1.85}
 .cells{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px;margin:0;padding:0;list-style:none}
 .cell{display:flex;flex-direction:column;align-items:center;gap:0;padding:6px 2px 8px;border-radius:12px;border:1px dashed var(--line)}
 .cell.met{border-style:solid;background:var(--card)}
@@ -92,15 +94,21 @@ h1{margin:0;font-family:"Zen Maru Gothic",sans-serif;font-weight:700;font-size:c
 @media(max-width:480px){.cells{grid-template-columns:repeat(3,minmax(0,1fr))}}
 
 .how{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border-top:1px solid var(--line);padding:22px 0 0;margin:0;list-style:none}
-.how li{padding:0 22px;border-left:1px solid var(--line);display:flex;flex-direction:column;gap:4px}
+.how li{padding:0 22px;border-left:1px solid var(--line);display:flex;flex-direction:column;gap:7px}
 .how li:first-child{padding-left:0;border-left:0}
-.how .n{font-family:"IBM Plex Mono",monospace;font-size:12px;color:var(--ink-soft)}
-.how h3{margin:0;font-family:"Zen Maru Gothic",sans-serif;font-size:17.5px;line-height:1.5}
-.how p{margin:0;font-size:14px;color:var(--ink-soft);line-height:1.75}
-.plays{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 0;padding:0;list-style:none}
-.how .plays-note{margin:10px 0 0;font-size:12.5px;color:var(--ink-soft)}
-.plays li{padding:1px 10px;border:0;border-radius:999px;background:var(--leaf-wash);color:#3F6B31;font-size:12.5px;line-height:1.8}
-@media(max-width:760px){.how{grid-template-columns:1fr;gap:16px}.how li{padding:0;border-left:0}}
+/* 番号は 水色の まるの 中に 白ぬきで */
+.how .n{flex:0 0 auto;width:28px;height:28px;border-radius:50%;background:#ABD5E9;color:#FFFFFF;font-family:"Zen Maru Gothic",sans-serif;font-weight:700;font-size:14.5px;line-height:1;display:inline-flex;align-items:center;justify-content:center}
+/* 1・2・3 の 見出しは「どうぶつの生まれ方」より ひかえめな 青に */
+.how h3{margin:0;font-family:"Zen Maru Gothic",sans-serif;font-size:18.5px;line-height:1.5;color:#3A75A0;display:flex;align-items:center;gap:10px}
+.how p{margin:0;font-size:14px;color:var(--ink-soft);line-height:1.85}
+.how-title{display:none}
+@media(max-width:760px){
+  .how{grid-template-columns:1fr;gap:16px}.how li{padding:0;border-left:0}
+  /* たてに ならぶ ときは、ずかんから しっかり 離して 見出しを つける */
+  .how-title{display:block;margin:16px 0 2px;padding-top:30px;border-top:1px solid var(--line);
+    font-family:"Zen Maru Gothic",sans-serif;font-weight:700;font-size:21px;line-height:1.4;color:var(--ink)}
+  .how{border-top:0;padding-top:0}
+}
 .foot{margin:0;text-align:center;font-size:13.5px;color:var(--ink-soft)}
 @media(prefers-reduced-motion:reduce){.board.hint .ring::after,.board.hint .tip,.cell.fresh{animation:none}}
 
@@ -149,14 +157,16 @@ h1{margin:0;font-family:"Zen Maru Gothic",sans-serif;font-weight:700;font-size:c
   .board.hint .tip .pip{animation:pipPulse 1.5s ease-in-out infinite}
   .board.touched .tip{box-shadow:none;background:var(--bg);font-size:13px}
   .zukan{gap:10px}
-  .zukan h2{font-size:19px}
+  .zukan h2{font-size:21px}
+  .zukan .count{font-size:15px}
   .cells{gap:6px}
   .cell{padding:4px 2px 6px}
   .cell span{font-size:13px}
   .cell small{font-size:10px}
   .cell small.ask{padding:4px 2px}
-  .how{padding-top:16px;gap:14px}
-  .how h3{font-size:16px}
+  .how{padding-top:0;gap:14px}
+  .how h3{font-size:17px;gap:9px}
+  .how .n{width:26px;height:26px;font-size:13.5px}
   .how p{font-size:13.5px}
 }
 /* 全画面ボタン（矢印の アイコン） */
@@ -331,28 +341,29 @@ body.op-lock{overflow:hidden}
     <ul class="cells" id="cells"></ul>
   </section>
 
+  <h2 class="how-title">あしあとのゆくえ</h2>
   <ol class="how">
-    <li><span class="n">1</span><h3>なぞる・タップする</h3><p>なぞったかたちやタップの回数でうまれる動物が決まります</p></li>
-    <li><span class="n">2</span><h3>かたちになる</h3><p>足あとは形の色に変わって寄りあつまり、大きな足あとに。かかとが顔、指先があしになります。手形は指があしやはね・トゲに、親指が首になります。</p></li>
-    <li><span class="n">3</span><h3>あそびはじめる</h3><p>どうぶつをタップすると、それぞれの声であいさつ。なかまが近くにいると、いろんなあそびをはじめます。</p>
-      <ul class="plays"><li>おいかけっこ</li><li>ボールあそび</li><li>かくれんぼ</li><li>ダンス</li><li>みずあび</li><li>ぎょうれつ</li></ul>
-      <p class="plays-note">4ひき以上そろうと、みんなで</p>
-      <ul class="plays"><li>ふえおに</li><li>だるまさんがころんだ</li><li>よーいどん</li><li>つなひき</li></ul>
-    </li>
+    <li><h3><span class="n">1</span>なぞる・タップする</h3><p>色々な方法で画面をなぞったり、タップしたりしてみよう。あしあとや手形が表示されます。</p></li>
+    <li><h3><span class="n">2</span>かたちになる</h3><p>あしあとや手形から、動物たちが生まれます。</p></li>
+    <li><h3><span class="n">3</span>あそびはじめる</h3><p>どうぶつをタップすると、あいさつしてくれます。また、なかまが近くにいると、いろんなあそびを始めます。</p></li>
   </ol>
 
 </main>
 
-<script src="ad/prints.js?v=28"></script>
-<script src="ad/species-foot.js?v=28"></script>
-<script src="ad/species-hand.js?v=28"></script>
-<script src="ad/gesture.js?v=28"></script>
-<script src="ad/scene.js?v=28"></script>
-<script src="ad/play.js?v=28"></script>
-<script src="ad/acts.js?v=28"></script>
-<script src="ad/acts-group.js?v=28"></script>
-<script src="ad/chat.js?v=28"></script>
-<script src="ad/debug.js?v=28"></script>
-<script src="ad/main.js?v=28"></script>
+<script src="ad/prints.js?v=29"></script>
+<script src="ad/species-foot.js?v=29"></script>
+<script src="ad/species-hand.js?v=29"></script>
+<script src="ad/gesture.js?v=29"></script>
+<script src="ad/scene.js?v=29"></script>
+<script src="ad/play.js?v=29"></script>
+<script src="ad/acts.js?v=29"></script>
+<script src="ad/acts-group.js?v=29"></script>
+<script src="ad/fueoni-weights.js?v=29"></script>
+<script src="ad/fueoni-ai.js?v=29"></script>
+<script src="ad/chat.js?v=29"></script>
+<script src="ad/debug.js?v=29"></script>
+<script src="ad/main.js?v=29"></script>
 </body>
 </html>
+
+</body></html>

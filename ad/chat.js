@@ -50,10 +50,8 @@ function ready(a){
 function stillOK(a){return a&&P.animals.indexOf(a)>=0&&!a.leaving&&!a.sess&&!a.watch&&!(P.area&&P.inArea(a.x,a.y,a.u,null));}
 
 function begin(a,b,sc){
-  var s={m:[a,b],l:sc.l,gap:1.35,t:0,i:0,together:sc.together,play:sc.play,ready:false};
-  C.s=s;
-  [a,b].forEach(function(x){x.chat=s;x.chatSeek=null;x.mult=1;x.rest=0;x.hold=false;});
-  /* かさなったまま 話さないよう、まず きちんと はなれて 向かいあう */
+  /* かさなったまま 話さないよう、まず きちんと はなれて 向かいあう。
+     立つ場所は 話しはじめる 前に きめる（しげみの 絵に かぶらない ところ） */
   var mid={x:(a.x+b.x)/2,y:(a.y+b.y)/2},gap=(P.halfW(a)+P.halfW(b))*1.08;
   var L=a.x<=b.x?a:b,R=L===a?b:a;
   /* 立つ場所が しげみ などで だめなときは、もう少し はなれた ところを さがす */
@@ -67,8 +65,21 @@ function begin(a,b,sc){
     return null;
   }
   var pL=spot(L,-1),pR=spot(R,1);
-  var lx=pL?pL.x:L.x,ly=pL?pL.y:L.y,rx=pR?pR.x:R.x,ry=pR?pR.y:R.y;
-  go(L,lx,ly,1.35);go(R,rx,ry,1.35);
+  /* すぐ そばに 空きが ない ときは、しげみ・池・文字に かからない あき地を 広くさがして、
+     そこまで 歩いてから 話す */
+  if(!pL||!pR){
+    var c2=S.safeSpot(Math.max(L.u,R.u),mid,function(c){
+      return S.clear(c.x-gap/2,c.y,L.u)&&S.clear(c.x+gap/2,c.y,R.u);
+    });
+    if(c2){pL={x:c2.x-gap/2,y:c2.y};pR={x:c2.x+gap/2,y:c2.y};}
+  }
+  /* どこにも 立てない ほど こんでいる ときは、この立ち話は やめる */
+  if(!pL||!pR)return null;
+
+  var s={m:[a,b],l:sc.l,gap:1.35,t:0,i:0,together:sc.together,play:sc.play,ready:false};
+  C.s=s;
+  [a,b].forEach(function(x){x.chat=s;x.chatSeek=null;x.mult=1;x.rest=0;x.hold=false;});
+  go(L,pL.x,pL.y,1.35);go(R,pR.x,pR.y,1.35);
   faceTo(L,R);faceTo(R,L);
   return s;
 }

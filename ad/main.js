@@ -68,7 +68,17 @@ function sizeAll(){
 }
 /* 案内の文字の位置（どうぶつがあそぶ場所からよける） */
 var tipEl=document.querySelector(".tip"),rectT=0;
+/* 案内の ふきだしは、なんども うんで なんども さわったら、もう じゃまなので 消す */
+var madeN=0,tapN=0,tipOff=false;
+function maybeHideTip(){
+  if(tipOff||madeN<3||tapN<3)return;
+  tipOff=true;
+  tipEl.style.display="none";
+  board.classList.remove("hint");
+  S.textRects=[];
+}
 function updateTextRects(){
+  if(tipOff){S.textRects=[];return;}
   var s=stage.getBoundingClientRect(),r=tipEl.getBoundingClientRect(),pad=10;
   /* スマホでは案内が草原の下に出るので、よける必要はない */
   if(r.top>=s.bottom-1){S.textRects=[];return;}
@@ -76,7 +86,7 @@ function updateTextRects(){
 }
 /* kind："base"＝ふつうの案内、"guide"＝動きなし設定での最初の一手、それ以外＝その場のお知らせ */
 var tipKind="base";
-function setTip(html,isDemo,kind){tipText.innerHTML=html;tipIsDemo=!!isDemo;tipKind=kind||(html===TIP0?"base":"note");}
+function setTip(html,isDemo,kind){if(tipOff)return;tipText.innerHTML=html;tipIsDemo=!!isDemo;tipKind=kind||(html===TIP0?"base":"note");}
 
 /* ---- 動きなし設定（自動デモを流さない）ときの、動かない導線 ----
    最初のどうぶつをうむまで、具体的な最初の一手を 数秒おきに差しかえて見せる */
@@ -129,7 +139,8 @@ function finish(w){
 function born(a,byUser,how){
   var first=!met[a.sp.key];met[a.sp.key]=true;
   if(first)markCell(a.sp.key);
-  if(byUser){demoStopped=true;if(!userMade)madeAt=P.now;userMade=true;setTip("「"+how+"」で、"+a.sp.name+"がうまれた！ タップするとあいさつします");}
+  if(byUser){demoStopped=true;if(!userMade)madeAt=P.now;userMade=true;madeN++;
+    setTip("「"+how+"」で、"+a.sp.name+"がうまれた！ タップするとあいさつします");maybeHideTip();}
 }
 function stampHand(p,demo,key){
   var sp=SPK[key],a=P.spawn(sp,p.x,p.y+P.U*.7,"stamp",1);
@@ -358,7 +369,7 @@ function up(){
   if(downOnBall){var B=P.hitBall(downPos);if(B&&X.onTapBall(B))return;}
   if(downOnAnimal){
     var a=P.hit(downPos);
-    if(a){tappedAnimal=true;tapAnimal(a,downPos.x);return;}
+    if(a){tappedAnimal=true;tapN++;tapAnimal(a,downPos.x);maybeHideTip();return;}
   }
   tapAt(downPos,false);
 }

@@ -581,6 +581,11 @@ ACT.oni={
     /* にげる子は 草原じゅうに ちらばる（みんなで はしっこに かたまらない） */
     var away=oni.x<S.W/2?1:-1,nrs=s.rs.length;
     s.rs.forEach(function(r,i){
+      /* おぼえた にげ方が あれば、ひとりずつ「おにから 遠い ところ」へ ちらばる。
+         元の きまった 隊形だと おにの そばに のこる子が できて、
+         はじまって 1〜2びょうで さいしょの 1ぴきが つかまって しまう */
+      var sp=AD.fueoniAI&&AD.fueoniAI.startSpot&&AD.fueoniAI.startSpot(s,r,oni);
+      if(sp){go(r,sp.x,sp.y,sp.mult);return;}
       var fx=clamp(S.W*.5+away*S.W*.22+(i-(nrs-1)/2)*r.u*2.6,r.u*1.6,S.W-r.u*1.6);
       var fy=clamp(S.top+(S.bottom-S.top)*((i%3)+.5)/3,S.top+r.u*.4,S.bottom-r.u*.3);
       var q=S.clear(fx,fy,r.u)?{x:fx,y:fy}:(S.safeSpot(r.u,{x:fx,y:fy})||P.roomySpot(r));
@@ -630,7 +635,13 @@ ACT.oni={
     if(s.st===1){
       /* おには できるだけ ちがう子を おいかける（だんごに ならないように） */
       if(!s.aimT||P.now>s.aimT||s.onis.some(function(c){return !c.aim||s.rs.indexOf(c.aim)<0;})){
-        s.aimT=P.now+rand(1.8,2.8);
+        /* ねらう あいてを きめなおす 間かく。
+           元は 1.8〜2.8びょう＝1びょうに 1回いじょう 変えて いて、
+           おいかけて つくった 間あいを まいかい すてて いた。
+           6〜10びょう 食らいつく ように すると、さいしょの 1ぴきが
+           20びょう超に なる 試合が 6.0%→2.5% に へる
+           （はやさも タッチ判定も さわって いない） */
+        s.aimT=P.now+rand(6,10);
         var free=s.rs.slice();
         s.onis.slice().sort(function(p,q){
           var dp=Math.min.apply(null,s.rs.map(function(r){return AD.dist(p,r);}).concat([1e9]));
@@ -734,17 +745,23 @@ ACT.oni={
           return;
         }
         r.watchP=null;
-        r.fleeT=(r.fleeT||0)-dt;
-        var G=r.fleeP;
-        if(!G||r.fleeT<=0||Math.hypot(G.x-r.x,G.y-r.y)<r.u*.6||!S.clear(G.x,G.y,r.u)||
-           Math.hypot(G.x-c.x,G.y-c.y)<Math.hypot(G.x-r.x,G.y-r.y)*.9){
-          var np=X.fleeFrom(r,c,s.rs);
-          /* いまの にげ先と ほとんど おなじなら そのまま（こまかい 切りかえを へらす） */
-          if(np&&(!r.fleeP||Math.hypot(np.x-r.fleeP.x,np.y-r.fleeP.y)>r.u*.8))r.fleeP=np;
-          r.fleeT=rand(1.4,2.1);
+        /* おぼえた にげ方（ad/fueoni-ai.js）が あれば それに きめてもらう。
+           なければ これまでどおり X.fleeFrom で えらぶ */
+        if(!(AD.fueoniAI&&AD.fueoniAI.step(s,r,c,dt))){
+          r.aiMult=0;
+          r.fleeT=(r.fleeT||0)-dt;
+          var G=r.fleeP;
+          if(!G||r.fleeT<=0||Math.hypot(G.x-r.x,G.y-r.y)<r.u*.6||!S.clear(G.x,G.y,r.u)||
+             Math.hypot(G.x-c.x,G.y-c.y)<Math.hypot(G.x-r.x,G.y-r.y)*.9){
+            var np=X.fleeFrom(r,c,s.rs);
+            /* いまの にげ先と ほとんど おなじなら そのまま（こまかい 切りかえを へらす） */
+            if(np&&(!r.fleeP||Math.hypot(np.x-r.fleeP.x,np.y-r.fleeP.y)>r.u*.8))r.fleeP=np;
+            r.fleeT=rand(1.4,2.1);
+          }
         }
-        /* さいごのほうは にげる子が つかれてくる */
-        if(r.fleeP)go(r,r.fleeP.x,r.fleeP.y,s.t>26?1.36:1.42);
+        /* さいごのほうは にげる子が つかれてくる。
+           r.aiMult は「うらを とる ときの 本気」（AI が きめた ときだけ 入る） */
+        if(r.fleeP)go(r,r.fleeP.x,r.fleeP.y,r.aiMult||(s.t>26?1.36:1.42));
       });
       /* ときどき だれかが きゅうに 本気を出す */
       s.spurtT-=dt;

@@ -910,7 +910,10 @@ var ACT={
         if(f.lag>0){f.lag-=dt;f.hold=true;if(f.lag<=0){f.hold=false;f.catchT=2;
           if(L.moving&&!(s.stop>0))P.say(f,"まって〜！",1.1);}continue;}
         f.catchT=Math.max(0,(f.catchT||0)-dt);
-        var pt=null,at=s.vpos-want,lhx=hx,lhy=hy;
+        /* 「見えない先頭（s.vpos）」は なめらかに する ぶん、本物の 先頭より
+           すこし うしろに いる。その ぶんを 足しておかないと、
+           いちばん前の子だけ よけいに 間が あいて 見える */
+        var pt=null,at=s.vpos+(s.vspd||0)/2.4-want,lhx=hx,lhy=hy;
         for(var j=s.trail.length-1;j>=0;j--){
           if(s.trail[j].c<=at){
             var q0=s.trail[j],q1=s.trail[Math.min(j+1,s.trail.length-1)],span=(q1.c-q0.c)||1,r0=clamp((at-q0.c)/span,0,1);
@@ -1430,7 +1433,16 @@ X.schedule=function(dt){
       if(g.even)n-=n%2;
       /* ひと休みが終わっている子から先に入れる */
       avail.sort(function(p,q){return (p.cool>0?1:0)-(q.cool>0?1:0)||Math.random()-.5;});
-      X.start(type,avail.slice(0,n));return;
+      var mem=avail.slice(0,n);
+      /* ふえおに だけ：さそう子（＝そのまま おに に なる）を
+         大きい ほうの 半分から えらぶ。
+         はやさは 体の おおきさ（a.u）に ひれいする ので、小さい子が おに だと
+         いちばん はやい にげ子に 追いつけない（元は 59%の 試合が そう だった） */
+      if(type==="oni"&&mem.length>1&&AD.fueoniAI&&AD.fueoniAI.pickOni){
+        var oi=AD.fueoniAI.pickOni(mem);
+        if(oi>0){var sw=mem[0];mem[0]=mem[oi];mem[oi]=sw;}
+      }
+      X.start(type,mem);return;
     }
   }
   var free=avail.filter(function(a){return a.cool<=0;});

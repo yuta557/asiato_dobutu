@@ -69,7 +69,11 @@ S.pondSpot=function(fromX){var p=S.pond,side=fromX<p.x?-1:1;return {x:p.x+side*(
    どうぶつと前後が入れかわる */
 function buildCovers(W,H,R){
   var br=AD.clamp(Math.min(W,H)*.085,32,130);
-  var covers=[{kind:"bush",x:W*.22,y:H*.58,r:br},{kind:"bush",x:W*.90,y:H*.86,r:br*.9}];
+  /* 右の しげみは、よーいどんの ゴールの はた（はしから 体1.3個ぶん）に かぶらない ように 左へ。
+     ちいさい ボードでも かぶらないよう、はたの 手前で 止める */
+  var uu=AD.clamp(Math.min(W,H)*.072,24,110),bw=br*.9*1.6;
+  var bx=Math.min(W*.79,W-uu*1.9-bw);
+  var covers=[{kind:"bush",x:W*.22,y:H*.58,r:br},{kind:"bush",x:bx,y:H*.86,r:br*.9}];
   covers.forEach(function(b,bi){
     b.img=sprite(b.r*3.2,b.r*2.1,R,function(bg){
       var cx=b.r*1.6,cy=b.r*2.05,bp=new Path2D();
