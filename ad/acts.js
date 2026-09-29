@@ -1085,7 +1085,7 @@ X.end=function(s){
   function release(a){
     a.afterPlay={type:s.type,t:P.now};a.sess=null;a.mult=1;a.face=0;a.hold=false;a.sleep=false;a.hidden=false;a.nod=0;a.shake=0;a.lag=0;a.catchT=0;
     a.faceLock=false;a.caught=false;a.wet=0;a.done=false;a.trip=0;a.boost=0;a.weak=0;a.wob=0;a.dash=0;
-    a.even=null;a.burst=0;a.aim=null;a.rank=0;a.startX=null;
+    a.even=null;a.burst=0;a.aim=null;a.rank=0;a.startX=null;a.careful=false;a.boldT=0;
     a.rest=rand(1.5,3);a.cool=rand(5,9);a.tx=a.x;a.ty=a.y;
   }
   s.m.forEach(function(a){if(a.sess===s)release(a);});

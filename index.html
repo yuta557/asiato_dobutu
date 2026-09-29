@@ -114,7 +114,7 @@ h1{margin:0;font-family:"Zen Maru Gothic",sans-serif;font-weight:700;font-size:c
 
 /* 作品について（右上のボタンで出す） */
 .about-btn{flex:0 0 auto}
-.about{position:absolute;inset:0;z-index:5;display:flex;align-items:center;justify-content:center;padding:18px;background:rgba(18,63,99,.3)}
+.about{position:absolute;inset:0;z-index:20;display:flex;align-items:center;justify-content:center;padding:18px;background:rgba(18,63,99,.3)}
 .about[hidden]{display:none}
 .about-card{max-width:540px;max-height:100%;overflow:auto;background:var(--card);border:1px solid var(--line);border-radius:16px;
   padding:20px 22px 16px;box-shadow:0 12px 32px rgba(18,63,99,.2)}
@@ -314,19 +314,19 @@ body.op-lock{overflow:hidden}
       <div class="demo-cursor" id="democursor" aria-hidden="true">
         <svg width="26" height="26" viewBox="0 0 26 26"><path d="M4 2 L20 12 L12.5 13.5 L9.5 21 Z" fill="#1B1A16" stroke="#FFFDF8" stroke-width="1.4" stroke-linejoin="round"/></svg>
       </div>
+    </div>
       <div class="about" id="about" hidden>
-        <div class="about-card" role="dialog" aria-modal="true" aria-labelledby="aboutTitle">
-          <h2 id="aboutTitle">あしあとどうぶつ について</h2>
-          <p>私たちは毎日、街を歩いている。<br>けれど、その一歩一歩にどれくらい意識を向けているだろう。</p>
-          <p>「あしあとどうぶつ」は、街を歩くことで残る足あとから、どうぶつが生まれるインタラクティブ作品です。<br>
-          足あとや手形が集まると、そこからどうぶつが生まれます。<br>
-          どんなどうぶつが生まれるかは、形や数によって変わります。<br>
-          生まれたどうぶつたちは、草原を歩きまわり、出会ったどうぶつと遊びはじめます。<br>
-          追いかけっこをしたり、かくれんぼをしたり。<br>
-          ときには、思いもよらない遊びが始まることも。</p>
-          <p>生まれたどうぶつたちが、どんなふうに遊ぶのか、少し覗いてみましょう。</p>
-          <button class="reset about-close" id="aboutClose" type="button">とじる</button>
-        </div>
+      <div class="about-card" role="dialog" aria-modal="true" aria-labelledby="aboutTitle">
+        <h2 id="aboutTitle">あしあとどうぶつ について</h2>
+        <p>私たちは毎日、街を歩いている。<br>けれど、その一歩一歩にどれくらい意識を向けているだろう。</p>
+        <p>「あしあとどうぶつ」は、街を歩くことで残る足あとから、どうぶつが生まれるインタラクティブ作品です。<br>
+        足あとや手形が集まると、そこからどうぶつが生まれます。<br>
+        どんなどうぶつが生まれるかは、形や数によって変わります。<br>
+        生まれたどうぶつたちは、草原を歩きまわり、出会ったどうぶつと遊びはじめます。<br>
+        追いかけっこをしたり、かくれんぼをしたり。<br>
+        ときには、思いもよらない遊びが始まることも。</p>
+        <p>生まれたどうぶつたちが、どんなふうに遊ぶのか、少し覗いてみましょう。</p>
+        <button class="reset about-close" id="aboutClose" type="button">とじる</button>
       </div>
     </div>
     <div class="tip" aria-live="polite"><span class="pip"></span><span id="tipText"><span class="tip-pc">ドラッグでなぞる形や、クリックの回数で、うまれるどうぶつが変わるよ</span><span class="tip-sp">指でなぞる形や、タップの回数で、うまれるどうぶつが変わるよ</span></span></div>
@@ -350,19 +350,19 @@ body.op-lock{overflow:hidden}
 
 </main>
 
-<script src="ad/prints.js?v=29"></script>
-<script src="ad/species-foot.js?v=29"></script>
-<script src="ad/species-hand.js?v=29"></script>
-<script src="ad/gesture.js?v=29"></script>
-<script src="ad/scene.js?v=29"></script>
-<script src="ad/play.js?v=29"></script>
-<script src="ad/acts.js?v=29"></script>
-<script src="ad/acts-group.js?v=29"></script>
-<script src="ad/fueoni-weights.js?v=29"></script>
-<script src="ad/fueoni-ai.js?v=29"></script>
-<script src="ad/chat.js?v=29"></script>
-<script src="ad/debug.js?v=29"></script>
-<script src="ad/main.js?v=29"></script>
+<script src="ad/prints.js?v=30"></script>
+<script src="ad/species-foot.js?v=30"></script>
+<script src="ad/species-hand.js?v=30"></script>
+<script src="ad/gesture.js?v=30"></script>
+<script src="ad/scene.js?v=30"></script>
+<script src="ad/play.js?v=30"></script>
+<script src="ad/acts.js?v=30"></script>
+<script src="ad/acts-group.js?v=30"></script>
+<script src="ad/fueoni-weights.js?v=30"></script>
+<script src="ad/fueoni-ai.js?v=30"></script>
+<script src="ad/chat.js?v=30"></script>
+<script src="ad/debug.js?v=30"></script>
+<script src="ad/main.js?v=30"></script>
 </body>
 </html>
 

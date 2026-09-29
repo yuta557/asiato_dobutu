@@ -172,6 +172,7 @@ ACT.daruma={
     s.caught.forEach(function(p){if(!p.hold&&arrived(p)){p.hold=true;p.mult=1;p.face=-s.side;p.dir=p.face;}});
     active.forEach(function(p){
       p.dash=Math.max(0,(p.dash||0)-dt);
+      p.boldT=Math.max(0,(p.boldT||0)-dt);
       p.wob=Math.max(0,(p.wob||0)-dt);
       p.shake=p.wob>0?Math.sin(P.now*45)*p.u*.07:0;
     });
@@ -179,7 +180,11 @@ ACT.daruma={
     if(s.phase==="call"){
       /* ボードの横はばに合わせて、4〜6回ほどで おにに とどく速さにする */
       var need=Math.abs(S.W-u*2.9)/5.5/2.1,base=clamp(need/(p0Speed(s)||1),.9,2.2);
-      active.forEach(function(p){p.hold=false;go(p,goalX,p.lane,p.dash>0?base*1.9:base*rand(.9,1.1));});
+      active.forEach(function(p){
+        /* その回だけ「ちょっと はやあるき」する子と、「すごく しんちょう」な子 */
+        var k=p.dash>0?1.9:p.boldT>0?1.7:p.careful?.45:rand(.9,1.1);
+        p.hold=false;go(p,goalX,p.lane,base*k);
+      });
       var toucher=active.filter(function(p){return Math.abs(p.x-s.ox)<u*1.6;})[0];
       if(toucher){
         toucher.hold=true;s.winner=toucher;
@@ -201,22 +206,31 @@ ACT.daruma={
       if(!s.checked&&s.pt<1.3){
         s.checked=true;
         var mover=s.forced&&!s.forced.caught?s.forced:null;
+        var bold=s.bold&&!s.bold.caught&&active.indexOf(s.bold)>=0?s.bold:null;
         if(!mover&&active.length){
-          /* おにに 近い（前に 出ている）子ほど はやく うごいていて 止まりにくいので、
-             「うごいた」と 言われる かくりつを 高くする */
-          var span=Math.max(u,Math.abs(S.W-u*2.9));
-          var frac=function(p){return clamp(Math.abs(p.x-s.ox)/span,0,1);};
-          var fmin=Math.min.apply(null,active.map(frac));
-          if(Math.random()<.32+.26*(1-fmin))
-            mover=weighted(active.map(function(p){return [p,.5+2.2*Math.pow(1-frac(p),1.5)];}));
+          /* はやあるきした子は、ほとんど 見つかる */
+          if(bold&&Math.random()<.88)mover=bold;
+          else{
+            /* おにに 近い（前に 出ている）子ほど はやく うごいていて 止まりにくいので、
+               「うごいた」と 言われる かくりつを 高くする。
+               しんちょうな子は そーっと しているので 見つかりにくい */
+            var span=Math.max(u,Math.abs(S.W-u*2.9));
+            var frac=function(p){return clamp(Math.abs(p.x-s.ox)/span,0,1);};
+            var fmin=Math.min.apply(null,active.map(frac));
+            if(Math.random()<.32+.26*(1-fmin))
+              mover=weighted(active.map(function(p){
+                return [p,(p.careful?.28:1)*(.5+2.2*Math.pow(1-frac(p),1.5))];}));
+          }
         }
         s.forced=null;
         if(mover)catchOne(s,mover);
-        else if(active.length&&Math.random()<.7){
-          /* だれも うごかなかった回 */
-          P.say(oni,pick(["うごいた子、いないね〜","みんな じょうず〜"]),1.4);
-          var safe=pick(active);
-          P.later(.9,function(){if(alive(s,safe))P.say(safe,pick(["セーフ…！","ふう…","どきどき した〜"]),1.2);});
+        else if(active.length){
+          /* だれも うごかなかった回。はやあるきが ばれなかった子は、ほっとする */
+          if(Math.random()<.7)P.say(oni,pick(["うごいた子、いないね〜","みんな じょうず〜"]),1.4);
+          var safe=bold||pick(active);
+          var sline=safe===bold?["セーフ…！ ばれてない","いまの、ばれなかった〜","ふう、あぶなかった"]
+                               :["セーフ…！","ふう…","どきどき した〜"];
+          P.later(.9,function(){if(alive(s,safe))P.say(safe,pick(sline),1.2);});
         }
       }
       if(s.pt<=0){
@@ -257,6 +271,31 @@ function startCall(s){
   s.phase="call";s.pt=quick?rand(.7,1.1):slow?rand(2.8,3.6):rand(1.6,2.4);
   oni.face=s.side;oni.dir=s.side;oni.sleep=true;
   P.say(oni,quick?"だるまさんがっ":slow?"だるまさんが〜〜〜":"だるまさんが〜",Math.max(1.2,s.pt));
+  darumaStyle(s);
+}
+/* その回だけの やくわり。
+   「いまのうちに」と ちょっと はやあるきする子と、「そろり そろり」と しんちょうな子。
+   はやあるきの子は ほとんど 見つかり、しんちょうな子は 見つかりにくい */
+function darumaStyle(s){
+  var act=s.players.filter(function(p){return !p.caught;});
+  s.players.forEach(function(p){p.careful=false;p.boldT=0;});
+  s.bold=null;
+  if(!act.length)return;
+  if(Math.random()<.5){
+    var b=pick(act);s.bold=b;b.boldT=rand(.6,1);
+    P.later(rand(.3,.6),function(){
+      if(alive(s,b)&&!b.caught&&s.phase==="call")
+        P.say(b,pick(["いまのうちに！","えいっ、はしっちゃえ","ちょっとだけ はやく…"]),1.2);
+    });
+  }
+  var rest=act.filter(function(p){return p!==s.bold;});
+  if(rest.length&&Math.random()<.45){
+    var c=pick(rest);c.careful=true;
+    P.later(rand(.8,1.2),function(){
+      if(alive(s,c)&&!c.caught&&s.phase==="call")
+        P.say(c,pick(["そろり… そろり…","あわてない、あわてない","いっぽ ずつ…"]),1.2);
+    });
+  }
 }
 function catchOne(s,p){
   var oni=s.m[0],u=maxU(s.m);
@@ -270,7 +309,7 @@ function catchOne(s,p){
     var qx=clamp(s.ox-s.side*u*.2,p.u,S.W-p.u),qy=clamp(s.oy+u*1.2*Math.ceil(k/2)*(k%2?1:-1),S.top,S.bottom);
     p.x=qx;p.y=qy;p.tx=qx;p.ty=qy;p.z=0;p.vz=0;p.mult=1;p.moving=false;p.hold=true;
     p.face=-s.side;p.dir=p.face;
-    P.say(p,"つかまった〜",1.2);P.jump(p,2.6);
+    P.say(p,p===s.bold?pick(["はやすぎたか〜","ばれちゃった〜"]):"つかまった〜",1.2);P.jump(p,2.6);
   });
 }
 
