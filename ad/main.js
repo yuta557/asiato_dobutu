@@ -458,6 +458,9 @@ function fitAbout(){
   card.style.setProperty("--about-fs",best+"px");
 }
 /* 上のバーの タイトルは、「まちであそぶ」くらいも 出ないなら 出さない */
+/* タイトルの 絵を おしたら、はじめから（画面を 読みこみ直す） */
+var titleImg=document.getElementById("titleImg");
+if(titleImg)titleImg.addEventListener("click",function(){location.reload();});
 function fitBarTitle(){
   var t=document.querySelector(".board-title");if(!t)return;
   t.style.display="";

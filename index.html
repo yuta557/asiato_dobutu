@@ -22,7 +22,7 @@ body{margin:0;background:var(--bg);color:var(--ink);font-family:"Zen Kaku Gothic
 h1{margin:0;font-family:"Zen Maru Gothic",sans-serif;font-weight:700;font-size:clamp(32px,5.4vw,54px);line-height:1.15;letter-spacing:.02em}
 /* 見出しは 手がきの タイトル */
 .banner{margin:0 auto;max-width:min(760px,86%)}
-.banner img{display:block;width:100%;height:auto}
+.banner img{display:block;width:100%;height:auto;cursor:pointer}
 /* タイトルと ボードの まわりの かざり（くも・おひさま・草花） */
 .hero{position:relative;display:flex;flex-direction:column;gap:30px;padding:0 clamp(0px,3.4vw,44px) 10px}
 .hero .board{position:relative;z-index:1}
@@ -298,7 +298,7 @@ body.op-lock{overflow:hidden}
       <img class="d-cr" src="img/deco-cloud-r.png" alt="">
     </div>
     <header class="head">
-      <h1 class="banner"><img src="img/title.png" alt="あしあとどうぶつ ― 歩いたあとから、どうぶつが生まれる。" width="1092" height="238"></h1>
+      <h1 class="banner"><img id="titleImg" src="img/title.png" alt="あしあとどうぶつ ― 歩いたあとから、どうぶつが生まれる。" title="おすと はじめから" width="1092" height="238"></h1>
     </header>
 
   <div class="board hint" id="board">
@@ -352,19 +352,19 @@ body.op-lock{overflow:hidden}
 
 </main>
 
-<script src="ad/prints.js?v=33"></script>
-<script src="ad/species-foot.js?v=33"></script>
-<script src="ad/species-hand.js?v=33"></script>
-<script src="ad/gesture.js?v=33"></script>
-<script src="ad/scene.js?v=33"></script>
-<script src="ad/play.js?v=33"></script>
-<script src="ad/acts.js?v=33"></script>
-<script src="ad/acts-group.js?v=33"></script>
-<script src="ad/fueoni-weights.js?v=33"></script>
-<script src="ad/fueoni-ai.js?v=33"></script>
-<script src="ad/chat.js?v=33"></script>
-<script src="ad/debug.js?v=33"></script>
-<script src="ad/main.js?v=33"></script>
+<script src="ad/prints.js?v=34"></script>
+<script src="ad/species-foot.js?v=34"></script>
+<script src="ad/species-hand.js?v=34"></script>
+<script src="ad/gesture.js?v=34"></script>
+<script src="ad/scene.js?v=34"></script>
+<script src="ad/play.js?v=34"></script>
+<script src="ad/acts.js?v=34"></script>
+<script src="ad/acts-group.js?v=34"></script>
+<script src="ad/fueoni-weights.js?v=34"></script>
+<script src="ad/fueoni-ai.js?v=34"></script>
+<script src="ad/chat.js?v=34"></script>
+<script src="ad/debug.js?v=34"></script>
+<script src="ad/main.js?v=34"></script>
 </body>
 </html>
 
