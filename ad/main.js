@@ -440,8 +440,20 @@ document.getElementById("reset").addEventListener("click",function(){
 var aboutEl=document.getElementById("about"),aboutBtn=document.getElementById("aboutBtn"),aboutClose=document.getElementById("aboutClose");
 function showAbout(on){
   aboutEl.hidden=!on;aboutBtn.setAttribute("aria-expanded",on?"true":"false");
+  if(on)fitAbout();
   try{(on?aboutClose:aboutBtn).focus({preventScroll:true});}catch(err){}
 }
+/* ふきだしの 中の 字は、スクロールを 出さずに ぜんぶ 見えるように 大きさを 合わせる */
+function fitAbout(){
+  if(aboutEl.hidden)return;
+  var card=aboutEl.querySelector(".about-card");if(!card)return;
+  var hi=window.innerWidth>600?16.5:13.5;
+  for(var fs=hi;fs>=9;fs-=.5){
+    card.style.setProperty("--about-fs",fs+"px");
+    if(card.scrollHeight<=card.clientHeight)break;
+  }
+}
+window.addEventListener("resize",fitAbout);
 aboutBtn.addEventListener("click",function(){showAbout(aboutEl.hidden);});
 aboutClose.addEventListener("click",function(){showAbout(false);});
 aboutEl.addEventListener("click",function(e){if(e.target===aboutEl)showAbout(false);});

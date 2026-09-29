@@ -117,10 +117,10 @@ h1{margin:0;font-family:"Zen Maru Gothic",sans-serif;font-weight:700;font-size:c
 /* 草原が すけて 見えないように、ボード ぜんたいを 紙で ふさぐ（まわりの 膜は 出さない） */
 .about{position:absolute;inset:0;z-index:20;display:flex;align-items:center;justify-content:center;padding:0;background:var(--card)}
 .about[hidden]{display:none}
-.about-card{width:100%;max-width:900px;max-height:100%;overflow:auto;background:var(--card);border:0;border-radius:0;
-  padding:26px 32px 22px;box-shadow:none}
-.about-card h2{margin:0 0 20px;font-family:"Zen Maru Gothic",sans-serif;font-size:24px;line-height:1.5}
-.about-card p{margin:0 0 20px;font-size:16.5px;line-height:2.15;color:var(--ink)}
+.about-card{width:100%;max-width:900px;max-height:100%;overflow:hidden;background:var(--card);border:0;border-radius:0;
+  padding:26px 32px 22px;box-shadow:none;--about-fs:16.5px}
+.about-card h2{margin:0 0 calc(var(--about-fs)*1.2);font-family:"Zen Maru Gothic",sans-serif;font-size:calc(var(--about-fs)*1.45);line-height:1.5}
+.about-card p{margin:0 0 calc(var(--about-fs)*1.2);font-size:var(--about-fs);line-height:2.15;color:var(--ink)}
 .about-card p:last-of-type{margin-bottom:14px}
 .about-close{display:block;margin-left:auto}
 /* はばが せまい ときは、行が みじかく なりすぎるので 改行しない */
@@ -128,8 +128,8 @@ h1{margin:0;font-family:"Zen Maru Gothic",sans-serif;font-weight:700;font-size:c
 @media(max-width:600px){
   .about{padding:0}
   .about-card{padding:18px 16px 14px}
-  .about-card h2{font-size:17px}
-  .about-card p{font-size:13.5px;line-height:1.85}
+  .about-card{--about-fs:13.5px}
+  .about-card p{line-height:1.85}
 }
 /* さわる画面：長押しで文字選択やメニューが出ないように */
 .board-stage,.board-title,.cell{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}
@@ -350,19 +350,19 @@ body.op-lock{overflow:hidden}
 
 </main>
 
-<script src="ad/prints.js?v=30"></script>
-<script src="ad/species-foot.js?v=30"></script>
-<script src="ad/species-hand.js?v=30"></script>
-<script src="ad/gesture.js?v=30"></script>
-<script src="ad/scene.js?v=30"></script>
-<script src="ad/play.js?v=30"></script>
-<script src="ad/acts.js?v=30"></script>
-<script src="ad/acts-group.js?v=30"></script>
-<script src="ad/fueoni-weights.js?v=30"></script>
-<script src="ad/fueoni-ai.js?v=30"></script>
-<script src="ad/chat.js?v=30"></script>
-<script src="ad/debug.js?v=30"></script>
-<script src="ad/main.js?v=30"></script>
+<script src="ad/prints.js?v=31"></script>
+<script src="ad/species-foot.js?v=31"></script>
+<script src="ad/species-hand.js?v=31"></script>
+<script src="ad/gesture.js?v=31"></script>
+<script src="ad/scene.js?v=31"></script>
+<script src="ad/play.js?v=31"></script>
+<script src="ad/acts.js?v=31"></script>
+<script src="ad/acts-group.js?v=31"></script>
+<script src="ad/fueoni-weights.js?v=31"></script>
+<script src="ad/fueoni-ai.js?v=31"></script>
+<script src="ad/chat.js?v=31"></script>
+<script src="ad/debug.js?v=31"></script>
+<script src="ad/main.js?v=31"></script>
 </body>
 </html>
 
