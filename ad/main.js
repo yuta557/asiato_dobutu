@@ -443,15 +443,18 @@ function showAbout(on){
   if(on)fitAbout();
   try{(on?aboutClose:aboutBtn).focus({preventScroll:true});}catch(err){}
 }
-/* ふきだしの 中の 字は、スクロールを 出さずに ぜんぶ 見えるように 大きさを 合わせる */
+/* 作品についての 字は、スクロールを 出さずに、あいている ぶんだけ 大きくする。
+   はばが せまい ときに 字が でかすぎ ないよう、はばでも かぎりを つける */
 function fitAbout(){
   if(aboutEl.hidden)return;
   var card=aboutEl.querySelector(".about-card");if(!card)return;
-  var hi=window.innerWidth>600?16.5:13.5;
-  for(var fs=hi;fs>=9;fs-=.5){
+  var hi=AD.clamp((card.clientWidth||360)/21,12,19),best=9;
+  for(var fs=9;fs<=hi;fs+=.5){
     card.style.setProperty("--about-fs",fs+"px");
-    if(card.scrollHeight<=card.clientHeight)break;
+    if(card.scrollHeight>card.clientHeight)break;
+    best=fs;
   }
+  card.style.setProperty("--about-fs",best+"px");
 }
 window.addEventListener("resize",fitAbout);
 aboutBtn.addEventListener("click",function(){showAbout(aboutEl.hidden);});
