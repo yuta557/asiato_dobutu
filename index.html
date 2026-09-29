@@ -38,10 +38,10 @@ h1{margin:0;font-family:"Zen Maru Gothic",sans-serif;font-weight:700;font-size:c
 @media(max-width:760px){.head{grid-template-columns:1fr}.page{padding:12px 14px 44px;gap:22px}}
 
 .board{position:relative;border-radius:18px;border:2px solid #AFD3EC;background:var(--card);overflow:hidden}
-.board-bar{display:flex;align-items:center;gap:10px;padding:10px 12px 10px 16px;border-bottom:1px solid var(--line);background:var(--bg);flex-wrap:wrap}
-.dot{width:9px;height:9px;border-radius:50%;background:var(--line)}
-.board-title{font-size:13px;color:var(--ink-soft);margin-right:auto}
-.reset{font:inherit;font-size:12.5px;color:var(--ink);background:var(--card);border:1px solid var(--line);border-radius:999px;padding:5px 12px;cursor:pointer}
+.board-bar{display:flex;align-items:center;gap:10px;padding:10px 12px 10px 16px;border-bottom:1px solid var(--line);background:var(--bg);flex-wrap:nowrap}
+.dot{flex:0 0 auto;width:9px;height:9px;border-radius:50%;background:var(--line)}
+.board-title{flex:1 1 auto;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:13px;color:var(--ink-soft);margin-right:auto}
+.reset{flex:0 0 auto;font:inherit;font-size:12.5px;color:var(--ink);background:var(--card);border:1px solid var(--line);border-radius:999px;padding:5px 12px;cursor:pointer;white-space:nowrap}
 .reset:hover{border-color:var(--ink-soft)}
 .reset:focus-visible{outline:3px solid var(--yellow);outline-offset:2px}
 .board-stage{position:relative;height:min(64vw,560px);min-height:340px;touch-action:none;background:#E4F0CC}
