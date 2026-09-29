@@ -383,6 +383,7 @@ function fsReal(){return (document.fullscreenElement||document.webkitFullscreenE
 function fsBig(){return board.classList.contains("bigscreen");}
 function bigSet(on){board.classList.toggle("bigscreen",on);document.body.classList.toggle("op-lock",on);}
 function fsSync(){
+  setTimeout(fitBarTitle,0);
   if(fsReal()&&fsBig())bigSet(false);            /* 本物の 全画面が 効いたら 代わりは やめる */
   if(fsBtn){var t=(fsReal()||fsBig())?"もとの 大きさ":"ぜんがめん";
     fsBtn.title=t;fsBtn.setAttribute("aria-label",t);}
@@ -456,7 +457,14 @@ function fitAbout(){
   }
   card.style.setProperty("--about-fs",best+"px");
 }
-window.addEventListener("resize",fitAbout);
+/* 上のバーの タイトルは、「まちであそぶ」くらいも 出ないなら 出さない */
+function fitBarTitle(){
+  var t=document.querySelector(".board-title");if(!t)return;
+  t.style.display="";
+  if(t.clientWidth<96)t.style.display="none";
+}
+window.addEventListener("resize",function(){fitAbout();fitBarTitle();});
+fitBarTitle();
 aboutBtn.addEventListener("click",function(){showAbout(aboutEl.hidden);});
 aboutClose.addEventListener("click",function(){showAbout(false);});
 aboutEl.addEventListener("click",function(e){if(e.target===aboutEl)showAbout(false);});

@@ -72,6 +72,10 @@ h1{margin:0;font-family:"Zen Maru Gothic",sans-serif;font-weight:700;font-size:c
 .board.touched .tip .pip{display:none}
 .tip-sp{display:none}
 @media(max-width:900px),(hover:none) and (pointer:coarse){.tip-pc{display:none}.tip-sp{display:inline}}
+/* ボタンの ことばは、はばに あわせて 3だんかい（この作品について → 作品について → 作品） */
+.lb-m,.lb-s{display:none}
+@media(max-width:900px),(hover:none) and (pointer:coarse){.lb-l{display:none}.lb-m{display:inline}}
+@media(max-width:440px){.lb-l,.lb-m,.lb-r{display:none}.lb-s{display:inline}}
 
 .zukan{display:grid;grid-template-columns:200px minmax(0,1fr);gap:16px 28px;align-items:center}
 .zukan h2{margin:0;font-family:"Zen Maru Gothic",sans-serif;font-size:24px;line-height:1.4}
@@ -113,7 +117,7 @@ h1{margin:0;font-family:"Zen Maru Gothic",sans-serif;font-weight:700;font-size:c
 @media(prefers-reduced-motion:reduce){.board.hint .ring::after,.board.hint .tip,.cell.fresh{animation:none}}
 
 /* 作品について（右上のボタンで出す） */
-.about-btn{flex:0 0 auto}
+.about-btn{flex:0 0 auto;margin-left:auto}
 /* 草原が すけて 見えないように、ボード ぜんたいを 紙で ふさぐ（まわりの 膜は 出さない） */
 .about{position:absolute;inset:0;z-index:20;display:flex;align-items:center;justify-content:center;padding:0;background:var(--card)}
 .about[hidden]{display:none}
@@ -301,8 +305,8 @@ body.op-lock{overflow:hidden}
     <div class="board-bar">
       <span class="dot"></span><span class="dot"></span><span class="dot"></span>
       <span class="board-title">まちであそぶボード — あしあとどうぶつ</span>
-      <button class="reset about-btn" id="aboutBtn" type="button" aria-expanded="false" aria-controls="about"><span class="tip-pc">この作品について</span><span class="tip-sp">作品について</span></button>
-      <button class="reset" id="reset" type="button">まっさらにする</button>
+      <button class="reset about-btn" id="aboutBtn" type="button" aria-expanded="false" aria-controls="about"><span class="lb-l">この作品について</span><span class="lb-m">作品について</span><span class="lb-s">作品</span></button>
+      <button class="reset" id="reset" type="button"><span class="lb-r">まっさらにする</span><span class="lb-s">まっさら</span></button>
       <button class="reset fs-btn" id="fsBtn" type="button" title="ぜんがめん" aria-label="ぜんがめん">
         <svg class="fs-i-open" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M20 15v5h-5M4.6 4.6l6 6M19.4 19.4l-6-6"/></svg>
         <svg class="fs-i-close" viewBox="0 0 24 24" aria-hidden="true"><path d="M10 4v6H4M14 20v-6h6M3.6 3.6l6.4 6.4M20.4 20.4l-6.4-6.4"/></svg>
@@ -348,19 +352,19 @@ body.op-lock{overflow:hidden}
 
 </main>
 
-<script src="ad/prints.js?v=32"></script>
-<script src="ad/species-foot.js?v=32"></script>
-<script src="ad/species-hand.js?v=32"></script>
-<script src="ad/gesture.js?v=32"></script>
-<script src="ad/scene.js?v=32"></script>
-<script src="ad/play.js?v=32"></script>
-<script src="ad/acts.js?v=32"></script>
-<script src="ad/acts-group.js?v=32"></script>
-<script src="ad/fueoni-weights.js?v=32"></script>
-<script src="ad/fueoni-ai.js?v=32"></script>
-<script src="ad/chat.js?v=32"></script>
-<script src="ad/debug.js?v=32"></script>
-<script src="ad/main.js?v=32"></script>
+<script src="ad/prints.js?v=33"></script>
+<script src="ad/species-foot.js?v=33"></script>
+<script src="ad/species-hand.js?v=33"></script>
+<script src="ad/gesture.js?v=33"></script>
+<script src="ad/scene.js?v=33"></script>
+<script src="ad/play.js?v=33"></script>
+<script src="ad/acts.js?v=33"></script>
+<script src="ad/acts-group.js?v=33"></script>
+<script src="ad/fueoni-weights.js?v=33"></script>
+<script src="ad/fueoni-ai.js?v=33"></script>
+<script src="ad/chat.js?v=33"></script>
+<script src="ad/debug.js?v=33"></script>
+<script src="ad/main.js?v=33"></script>
 </body>
 </html>
 
