@@ -123,8 +123,6 @@ h1{margin:0;font-family:"Zen Maru Gothic",sans-serif;font-weight:700;font-size:c
 .about-card p{margin:0 0 calc(var(--about-fs)*1.2);font-size:var(--about-fs);line-height:2.15;color:var(--ink)}
 .about-card p:last-of-type{margin-bottom:14px}
 .about-close{display:block;margin-left:auto}
-/* はばが せまい ときは、行が みじかく なりすぎるので 改行しない */
-@media(max-width:700px){.about-card br.br-w{display:none}}
 @media(max-width:600px){
   .about{padding:0}
   .about-card{padding:18px 16px 14px}
@@ -321,10 +319,10 @@ body.op-lock{overflow:hidden}
       <div class="about" id="about" hidden>
       <div class="about-card" role="dialog" aria-modal="true" aria-labelledby="aboutTitle">
         <h2 id="aboutTitle">あしあとどうぶつ について</h2>
-      <p>私たちは毎日、街を歩いている。<br>けれど、その一歩一歩にどれくらい意識を向けているだろう。</p>
-      <p>「あしあとどうぶつ」は、街を歩く時の何気ない一歩から、どうぶつが生まれるインタラクティブ作品です。<br>
-      足あとや手形から生まれたどうぶつたちは、草原を歩きまわり、ほかのどうぶつと出会うと遊びはじめます。追いかけっこをしたり、かくれんぼをしたり。ときには、思いもよらない遊びが始まることも。</p>
-      <p>あなたの一歩からは、どんなどうぶつが生まれるでしょう。<br class="br-w">そして、どんな遊びが始まるのでしょう。<br class="br-w">少しだけ、覗いてみましょう。</p>
+      <p>私たちは毎日、街を歩いている。<br>けれど、その一歩一歩にどれくらい意識を向けているだろう。<br>「あしあとどうぶつ」は、街を歩く時の何気ない一歩から、どうぶつが生まれるインタラクティブ作品です。</p>
+      <p>足あとや手形から生まれたどうぶつたちは、草原を歩きまわり、ほかのどうぶつと出会うと遊びはじめます。追いかけっこをしたり、かくれんぼをしたり。ときには、思いもよらない遊びが始まることも。</p>
+      <p>あなたの一歩からは、どんなどうぶつが生まれるでしょう。そして、どんな遊びが始まるのでしょう。少しだけ、覗いてみましょう。</p>
+
 
         <button class="reset about-close" id="aboutClose" type="button">とじる</button>
       </div>
