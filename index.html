@@ -205,12 +205,12 @@ body.op-lock{overflow:hidden}
 @media(min-aspect-ratio:11/5){#opening{--bgimg:url(img/opening-bg.webp);--ar:2.2716;--capL:15.00%;--capW:70.00%;--capT:3.00%;--sky:#D5F3FC;--grass:#EFF8DF;
     --rampL:linear-gradient(to bottom,#E2F7FC 0%,#E3F6F1 8%,#EDF4D7 17%,#E8EEBE 25%,#E3ECB9 33%,#E4F2D3 42%,#ECF7F3 50%,#E7F6F2 58%,#E7F6E4 67%,#EFF7CD 75%,#EAF4B2 83%,#EBF5B0 92%,#F0F8C7 100%);
     --rampR:linear-gradient(to bottom,#D2F2FC 0%,#E3F6FA 8%,#F7FBF8 17%,#F7FBF7 25%,#F3FAF9 33%,#F4FAF7 42%,#F1F9F5 50%,#EFF9F5 58%,#EDF7EC 67%,#E7F2D2 75%,#DBE8A8 83%,#E0ECB7 92%,#E9F6ED 100%)}}
-#opening{position:fixed;inset:0;z-index:120;overflow:hidden;display:flex;align-items:center;justify-content:center;
+#opening{position:fixed;inset:0;height:100vh;height:100svh;z-index:120;overflow:hidden;display:flex;align-items:center;justify-content:center;
   background:linear-gradient(to bottom,var(--sky) 0,var(--sky) 50%,var(--grass) 50%,var(--grass) 100%);transition:opacity .6s ease}
 #opening.op-out{opacity:0;pointer-events:none}
 /* 絵は むりに 大きく しない（画面に ぜんぶ 入る 大きさ） */
-#opening .op-art{position:relative;z-index:1;flex:0 0 auto;width:min(95vw,calc(var(--ar)*92vh));aspect-ratio:var(--ar)}
-@media(max-width:760px){#opening .op-art{width:min(100vw,calc(var(--ar)*88vh))}}
+#opening .op-art{position:relative;z-index:1;flex:0 0 auto;width:min(95vw,calc(var(--ar)*92svh));aspect-ratio:var(--ar)}
+@media(max-width:760px){#opening .op-art{width:min(100vw,calc(var(--ar)*88svh))}}
 /* たて画面は よこはば いっぱい。たりない ときは 上の 空を 切って、草を 画面の 下に つける */
 /* 1:1〜1.7 は 空の絵を よこはば いっぱいに。左右は 切らず、上の あまりだけ 空の色で つなぐ */
 @media(min-aspect-ratio:1/1) and (max-aspect-ratio:17/10){
@@ -219,12 +219,12 @@ body.op-lock{overflow:hidden}
 /* 空の絵（よこなが）は まわりを うめず、画面を おおう。はみ出す ぶんは 上の 空を 切る */
 @media(min-aspect-ratio:17/10) and (max-aspect-ratio:11/5){
   #opening{align-items:flex-end}
-  #opening .op-art{width:max(100vw,calc(var(--ar)*100vh))}
+  #opening .op-art{width:max(100vw,calc(var(--ar)*100svh))}
   #opening .op-side{display:none}
   #opening .op-fade,#opening .op-bg{-webkit-mask-image:none;mask-image:none}}
 @media(max-aspect-ratio:1/1){#opening{align-items:flex-end}
-  /* 切るのは 空の 14%まで。タイトルまで 切れないように する */
-  #opening .op-art{width:min(100vw,calc(var(--ar)*116vh))}}
+  /* 上の 空を 切るのは すこしだけ。タイトルが 上に はみ出さないように する */
+  #opening .op-art{width:min(100vw,calc(var(--ar)*104svh));margin-bottom:-2svh}}
 #opening .op-side{position:absolute;z-index:0;top:0;bottom:0;left:-100vw;right:-100vw;
   background:var(--rampL) left center/50.5% 100% no-repeat,var(--rampR) right center/50.5% 100% no-repeat;
   -webkit-mask-image:linear-gradient(to bottom,transparent 0,#000 14%,#000 86%,transparent 100%);
