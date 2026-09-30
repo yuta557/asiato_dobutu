@@ -21,7 +21,8 @@ body{margin:0;background:var(--bg);color:var(--ink);font-family:"Zen Kaku Gothic
 .head{display:block}
 h1{margin:0;font-family:"Zen Maru Gothic",sans-serif;font-weight:700;font-size:clamp(32px,5.4vw,54px);line-height:1.15;letter-spacing:.02em}
 /* 見出しは 手がきの タイトル */
-.banner{margin:0 auto;max-width:min(760px,86%)}
+.banner{margin:0 auto;width:min(760px,86%);max-width:100%}
+.head{width:100%}
 .banner img{display:block;width:100%;height:auto;aspect-ratio:1092/238;cursor:pointer}
 /* 絵の タイトルが 出ない ブラウザ では、文字の タイトルに 切りかえる */
 .banner .banner-text{display:none;text-align:center;color:#207474;font-family:"Zen Maru Gothic",sans-serif;font-weight:700;line-height:1.25;cursor:pointer}
@@ -37,7 +38,7 @@ h1{margin:0;font-family:"Zen Maru Gothic",sans-serif;font-weight:700;font-size:c
 .deco .d-sun{right:2px;top:0;width:clamp(48px,7.5vw,88px)}
 .deco .d-cr{right:0;top:clamp(74px,10vw,116px);width:clamp(70px,11vw,126px)}
 /* せまい画面では タイトルの 絵に おひさまが かさなるので、かざりを 引っこめる */
-@media(max-width:700px){.deco .d-cr,.deco .d-sun{display:none}.banner{max-width:94%}}
+@media(max-width:700px){.deco .d-cr,.deco .d-sun{display:none}.banner{width:94%}}
 .lead{margin:0;max-width:36em;font-size:15.5px}
 .lead b{font-weight:500;background:linear-gradient(transparent 62%,var(--wash-yellow) 62%)}
 @media(max-width:760px){.head{grid-template-columns:1fr}.page{padding:12px 14px 44px;gap:22px}}
@@ -364,19 +365,19 @@ body.op-lock{overflow:hidden}
 
 </main>
 
-<script src="ad/prints.js?v=36"></script>
-<script src="ad/species-foot.js?v=36"></script>
-<script src="ad/species-hand.js?v=36"></script>
-<script src="ad/gesture.js?v=36"></script>
-<script src="ad/scene.js?v=36"></script>
-<script src="ad/play.js?v=36"></script>
-<script src="ad/acts.js?v=36"></script>
-<script src="ad/acts-group.js?v=36"></script>
-<script src="ad/fueoni-weights.js?v=36"></script>
-<script src="ad/fueoni-ai.js?v=36"></script>
-<script src="ad/chat.js?v=36"></script>
-<script src="ad/debug.js?v=36"></script>
-<script src="ad/main.js?v=36"></script>
+<script src="ad/prints.js?v=37"></script>
+<script src="ad/species-foot.js?v=37"></script>
+<script src="ad/species-hand.js?v=37"></script>
+<script src="ad/gesture.js?v=37"></script>
+<script src="ad/scene.js?v=37"></script>
+<script src="ad/play.js?v=37"></script>
+<script src="ad/acts.js?v=37"></script>
+<script src="ad/acts-group.js?v=37"></script>
+<script src="ad/fueoni-weights.js?v=37"></script>
+<script src="ad/fueoni-ai.js?v=37"></script>
+<script src="ad/chat.js?v=37"></script>
+<script src="ad/debug.js?v=37"></script>
+<script src="ad/main.js?v=37"></script>
 </body>
 </html>
 
