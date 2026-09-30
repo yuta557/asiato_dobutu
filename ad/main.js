@@ -459,8 +459,17 @@ function fitAbout(){
 }
 /* 上のバーの タイトルは、「まちであそぶ」くらいも 出ないなら 出さない */
 /* タイトルの 絵を おしたら、はじめから（画面を 読みこみ直す） */
-var titleImg=document.getElementById("titleImg");
-if(titleImg)titleImg.addEventListener("click",function(){location.reload();});
+var titleImg=document.getElementById("titleImg"),bannerEl=document.getElementById("banner");
+if(bannerEl)bannerEl.addEventListener("click",function(){location.reload();});
+/* 絵の タイトルが 出ない（よみこめない・高さが 出ない）ときは、文字の タイトルに する */
+function checkTitleImg(){
+  if(!titleImg||!bannerEl)return;
+  var bad=(titleImg.complete&&!titleImg.naturalWidth)||titleImg.getBoundingClientRect().height<12;
+  bannerEl.classList.toggle("img-off",!!bad);
+}
+if(titleImg){titleImg.addEventListener("load",checkTitleImg);titleImg.addEventListener("error",checkTitleImg);}
+window.addEventListener("load",checkTitleImg);
+setTimeout(checkTitleImg,1200);
 function fitBarTitle(){
   var t=document.querySelector(".board-title");if(!t)return;
   var sub=t.querySelector(".bt-sub");
