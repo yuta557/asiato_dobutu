@@ -198,7 +198,7 @@ h1{margin:0;font-family:"Zen Maru Gothic",sans-serif;font-weight:700;font-size:c
 body.op-lock{overflow:hidden}
 /* 画面の よこなが具合で、草原の 絵を 3まいから えらぶ。
    絵の そとがわは、絵の ふちの 色を そのまま たてに のばした 色で うめる（かたちが 出ないので つなぎ目が 見えない） */
-#opening{--bgimg:url(img/opening-bg-portrait.webp);--ar:0.6082;--capL:4.00%;--capW:92.00%;--capT:17.77%;--sky:#D7F6FC;--grass:#F7FDD9;
+#opening{--bgimg:url(img/opening-bg-portrait.webp);--ar:0.6082;--capL:4.00%;--capW:92.00%;--capT:22.00%;--sky:#D7F6FC;--grass:#F7FDD9;
     --rampL:linear-gradient(to bottom,#E4FAFD 0%,#DAF7FB 8%,#DFF8FC 17%,#EBFBFC 25%,#F4FDFA 33%,#F9FDEF 42%,#F7FCD7 50%,#F3FBD6 58%,#F1FCD5 67%,#F1FCC5 75%,#F2FCCA 83%,#F8FDD9 92%,#FBFDE4 100%);
     --rampR:linear-gradient(to bottom,#E1F8FC 0%,#DDF7FB 8%,#E0F8FB 17%,#E9FAFC 25%,#F1FCFC 33%,#FAFDF6 42%,#FCFEF1 50%,#FBFEEB 58%,#F8FDE3 67%,#F6FDDA 75%,#F2FBCB 83%,#F4FCD0 92%,#FAFDE3 100%)}
 @media(min-aspect-ratio:1/1){#opening{--bgimg:url(img/opening-bg-sky.webp);--ar:2.0000;--capL:14.00%;--capW:72.00%;--capT:9.91%;--sky:#D2F4FC;--grass:#F5FDD9}}
@@ -223,8 +223,8 @@ body.op-lock{overflow:hidden}
   #opening .op-side{display:none}
   #opening .op-fade,#opening .op-bg{-webkit-mask-image:none;mask-image:none}}
 @media(max-aspect-ratio:1/1){#opening{align-items:flex-end}
-  /* 上の 空を 切るのは すこしだけ。タイトルが 上に はみ出さないように する */
-  #opening .op-art{width:min(100vw,calc(var(--ar)*104svh));margin-bottom:-2svh}}
+  /* よこは 画面いっぱい。上の 空は 切れるので、タイトルは 下の ほうに おく */
+  #opening .op-art{width:min(100vw,calc(var(--ar)*116svh))}}
 #opening .op-side{position:absolute;z-index:0;top:0;bottom:0;left:-100vw;right:-100vw;
   background:var(--rampL) left center/50.5% 100% no-repeat,var(--rampR) right center/50.5% 100% no-repeat;
   -webkit-mask-image:linear-gradient(to bottom,transparent 0,#000 14%,#000 86%,transparent 100%);
@@ -311,7 +311,7 @@ body.op-lock{overflow:hidden}
   <div class="board hint" id="board">
     <div class="board-bar">
       <span class="dot"></span><span class="dot"></span><span class="dot"></span>
-      <span class="board-title">まちであそぶボード — あしあとどうぶつ</span>
+      <span class="board-title"><span class="bt-main">まちであそぶボード</span><span class="bt-sub"> — あしあとどうぶつ</span></span>
       <button class="reset about-btn" id="aboutBtn" type="button" aria-expanded="false" aria-controls="about"><span class="lb-l">この作品について</span><span class="lb-m">作品について</span><span class="lb-s">作品</span></button>
       <button class="reset" id="reset" type="button" title="まっさらにする" aria-label="まっさらにする"><span class="lb-r">まっさらにする</span><svg class="ic-reload" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.5 12a8.5 8.5 0 1 1-2.49-6.01"/><path d="M20.5 4.2v5.1h-5.1"/></svg></button>
       <button class="reset fs-btn" id="fsBtn" type="button" title="ぜんがめん" aria-label="ぜんがめん">
@@ -359,19 +359,19 @@ body.op-lock{overflow:hidden}
 
 </main>
 
-<script src="ad/prints.js?v=34"></script>
-<script src="ad/species-foot.js?v=34"></script>
-<script src="ad/species-hand.js?v=34"></script>
-<script src="ad/gesture.js?v=34"></script>
-<script src="ad/scene.js?v=34"></script>
-<script src="ad/play.js?v=34"></script>
-<script src="ad/acts.js?v=34"></script>
-<script src="ad/acts-group.js?v=34"></script>
-<script src="ad/fueoni-weights.js?v=34"></script>
-<script src="ad/fueoni-ai.js?v=34"></script>
-<script src="ad/chat.js?v=34"></script>
-<script src="ad/debug.js?v=34"></script>
-<script src="ad/main.js?v=34"></script>
+<script src="ad/prints.js?v=35"></script>
+<script src="ad/species-foot.js?v=35"></script>
+<script src="ad/species-hand.js?v=35"></script>
+<script src="ad/gesture.js?v=35"></script>
+<script src="ad/scene.js?v=35"></script>
+<script src="ad/play.js?v=35"></script>
+<script src="ad/acts.js?v=35"></script>
+<script src="ad/acts-group.js?v=35"></script>
+<script src="ad/fueoni-weights.js?v=35"></script>
+<script src="ad/fueoni-ai.js?v=35"></script>
+<script src="ad/chat.js?v=35"></script>
+<script src="ad/debug.js?v=35"></script>
+<script src="ad/main.js?v=35"></script>
 </body>
 </html>
 

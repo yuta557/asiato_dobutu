@@ -463,8 +463,11 @@ var titleImg=document.getElementById("titleImg");
 if(titleImg)titleImg.addEventListener("click",function(){location.reload();});
 function fitBarTitle(){
   var t=document.querySelector(".board-title");if(!t)return;
-  t.style.display="";
-  if(t.clientWidth<96)t.style.display="none";
+  var sub=t.querySelector(".bt-sub");
+  t.style.display="";if(sub)sub.style.display="";
+  /* 切れる くらいなら「まちであそぶボード」だけに。それも 入らないなら 出さない */
+  if(sub&&t.scrollWidth>t.clientWidth+1)sub.style.display="none";
+  if(t.scrollWidth>t.clientWidth+1)t.style.display="none";
 }
 window.addEventListener("resize",function(){fitAbout();fitBarTitle();});
 fitBarTitle();
