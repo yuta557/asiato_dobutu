@@ -708,7 +708,10 @@ ACT.oni={
         if(c.hold)return;
         /* わりあては 下でまとめて きめる */
         var t=c.aim;
-        if(t){
+        if(t&&(c.burst||0)>0){
+          /* 本気の あいだは、先まわりも よけも せず あいてへ まっすぐ */
+          c.face=0;c.gox=null;c.goy=null;go(c,t.x,t.y,1.58);
+        }else if(t){
           c.face=0;
           /* おに同士が かたまらないよう、ほかの おにから はなれる ぶんを 足す */
           var px=0,py=0;
@@ -773,6 +776,12 @@ ACT.oni={
         var c=s.onis.slice().sort(function(p,q){return AD.dist(r,p)-AD.dist(r,q);})[0];
         if(!c)return;
         r.hold=false;r.face=0;
+        /* 本気の あいだは、おにの 反対がわへ まっすぐ */
+        if((r.burst||0)>0&&r.burstP){
+          /* とちゅうで 行き先を 変えない（変えると 行ったり もどったり する） */
+          r.watchP=null;r.fleeP=null;r.aiMult=0;
+          go(r,r.burstP.x,r.burstP.y,1.45);return;
+        }
         /* おにが まだ とおいうちは、にげずに 広いところへ 歩いて ようすを見る
            （みんなで 遠くの はしっこに かたまらない） */
         if(AD.dist(r,c)>r.u*7.5){
@@ -810,6 +819,12 @@ ACT.oni={
         var who2=pick(pool);
         if(who2){
           who2.burst=rand(2.4,3.6);
+          /* 本気の あいだは まっすぐ。にげる子は おにの 反対がわへ、
+             おには あいてへ まっすぐ（行ったり もどったり しない） */
+          if(s.rs.indexOf(who2)>=0){
+            var cc=s.onis.slice().sort(function(p,q){return AD.dist(who2,p)-AD.dist(who2,q);})[0];
+            who2.burstP=cc?burstAway(who2,cc):null;
+          }else who2.burstP=null;
           P.say(who2,s.rs.indexOf(who2)>=0?pick(["本気で にげる〜！","まだ つかまらないよ！"]):pick(["ここからが 本気！","スピード アップ！"]),1.4);
           P.note(who2.x,P.headY(who2)-6,"ビューン","#E9A93B");
         }
@@ -834,8 +849,16 @@ ACT.oni={
       }
       /* のこり時間を にげる子が 知らせる */
       var left2=Math.ceil(ONI_SEC-(s.t-(s.runT0||0)));
-      if(left2<=10&&s.rs.length&&once(s,"left10")){P.say(pick(s.rs),"のこり 10びょう！",1.5);s.talkT=Math.max(s.talkT,1.6);}
-      if(left2<=5&&s.rs.length&&once(s,"left5")){P.say(pick(s.rs),"あと 5びょう、にげきるぞ〜！",1.5);s.talkT=Math.max(s.talkT,1.6);}
+      /* のこり時間は、おにから じゅうぶん はなれている子が 言う。
+         みんな おいつかれそうな ときは、見ている子が かわりに 知らせる */
+      if(left2<=10&&s.rs.length&&!s.flag.left10){
+        var t10=timeTeller(s);
+        if(t10){s.flag.left10=true;P.say(t10.a,"のこり 10びょう！",1.5);s.talkT=Math.max(s.talkT,1.6);}
+      }
+      if(left2<=5&&s.rs.length&&!s.flag.left5){
+        var t5=timeTeller(s);
+        if(t5){s.flag.left5=true;P.say(t5.a,t5.run?"あと 5びょう、にげきるぞ〜！":"あと 5びょう！",1.5);s.talkT=Math.max(s.talkT,1.6);}
+      }
       s.talkT-=dt;
       if(s.talkT<0){
         s.talkT=rand(2,3.2);
@@ -886,6 +909,33 @@ ACT.oni={
   }
 };
 
+/* ふえおに：本気を 出した にげる子の 「まっすぐ にげる先」。
+   おにの 反対がわへ まっすぐ。草むらなどで ふさがれて いる ときだけ すこし 角度を ずらす */
+function burstAway(r,c){
+  var base=Math.atan2(r.y-c.y,r.x-c.x),best=null;
+  for(var k=0;k<9;k++){
+    var ang=base+(k%2?1:-1)*Math.ceil(k/2)*.3;
+    var gx=clamp(r.x+Math.cos(ang)*r.u*14,r.u,S.W-r.u),gy=clamp(r.y+Math.sin(ang)*r.u*9,S.top,S.bottom);
+    var run=Math.hypot(gx-r.x,gy-r.y);
+    if(S.clear(gx,gy,r.u)&&run>r.u*7)return {x:gx,y:gy};
+    if(!best||run>best.run)best={x:gx,y:gy,run:run};
+  }
+  return best;   /* どこも ふさがれて いたら、いちばん 走れる 向きへ */
+}
+/* ふえおに：のこり時間を 知らせる子。
+   にげている子は「おにから 体6つぶん より はなれている」ときだけ。
+   だれも 余裕が ないときは、見ている子が かわりに 言う */
+function timeTeller(s){
+  var safe=s.rs.filter(function(r){
+    var d=1e9;
+    s.onis.forEach(function(o){d=Math.min(d,Math.hypot(o.x-r.x,o.y-r.y));});
+    return d>r.u*6;
+  });
+  if(safe.length)return {a:pick(safe),run:true};
+  var fans=P.animals.filter(function(a){return a.watch===s&&(!a.watchMove||a.galSet);});
+  if(fans.length)return {a:pick(fans),run:false};
+  return null;
+}
 /* ふえおに：つかまえた子を おにに する */
 function catchIt(s,c,t){
   var i=s.rs.indexOf(t);if(i<0)return;
@@ -901,7 +951,7 @@ function catchIt(s,c,t){
     if(fin){P.say(t,pick(["つかまっちゃった〜","あ〜、つかまった！","もう ちょっと だったのに〜"]),1.5);return;}
     /* ふきだしが たくさん 出ている ときは、わざわざ 言わない */
     if(P.bubbles.length>=3)return;
-    P.say(t,pick(["つかまった〜、おにに なっちゃった","いっしょに おにだ〜"]),1.5);
+    P.say(t,pick(["つかまった〜、おにに なっちゃった","つぎは ぼくが おいかけるぞ〜"]),1.5);
   });
 }
 /* みんなであそぶ あそびの一覧（4ひき以上いるときに えらばれる） */
